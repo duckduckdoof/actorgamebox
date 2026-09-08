@@ -32,3 +32,6 @@ RECORDINGS_DIR = "./recordings/"
 
 # Config file
 DEFAULT_CONFIG_FILE = "./configs/default.ini"
+
+# Seed
+DEFAULT_SEED = 278691
