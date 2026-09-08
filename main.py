@@ -55,7 +55,7 @@ def parse():
     )
     parser.add_argument(
         "-u", "--use-config",
-        action="store_false",
+        action="store_true",
         help="Use config file instead of parse args."
     )
     parser.add_argument(
@@ -97,12 +97,13 @@ def run(kwargs: dict):
     e = Environment(**kwargs)
 
     for _ in range(10):
-        act = e.env.action_space.sample()
+        obs, info = e.env.reset()
+        done = False
 
-        obs, rew, term, trunc, info = e.env.step(act)
-
-        if term or trunc:
-            obs, info = e.env.reset()
+        while not done:
+            act = e.env.action_space.sample()
+            obs, rew, term, trunc, info = e.env.step(act)
+            done = term or trunc
 
     e.env.close()
 
