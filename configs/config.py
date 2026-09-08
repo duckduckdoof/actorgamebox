@@ -10,6 +10,8 @@ Configurations for atari game environment.
 """
 
 # CONSTANTS
+
+# ROM Info
 ROMS = [
     "ALE/Adventure-v5",
     "ALE/AirRaid-v5",
@@ -25,4 +27,8 @@ ROMS = [
 
 DEFAULT_ROM = ROMS[7]
 
+# Gameplay recording
 RECORDINGS_DIR = "./recordings/"
+
+# Config file
+DEFAULT_CONFIG_FILE = "./configs/default.ini"
