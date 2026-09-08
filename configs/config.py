@@ -21,6 +21,7 @@ ROMS = [
     "ALE/Frogger-v5",
     "ALE/MontezumaRevenge-v5",
     "ALE/Pong-v5",
+    "PongNoFrameskip-v4",
     "ALE/Seaquest-v5",
     "ALE/Surround-v5"
 ]

@@ -104,6 +104,7 @@ def run(kwargs: dict):
             act = e.env.action_space.sample()
             obs, rew, term, trunc, info = e.env.step(act)
             done = term or trunc
+            break
 
     e.env.close()
 
