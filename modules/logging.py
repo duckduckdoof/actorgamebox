@@ -35,7 +35,7 @@ def configure_logger(
 
     # Handlers (file + stdout if flag)
     today = datetime.now(tz=timezone.utc).strftime(log_datetime_prefix)
-    file_handler = logging.FileHandler(f"{logger_name}-{today}.log")
+    file_handler = logging.FileHandler(f"{logger_dir}{logger_name}-{today}.log")
     file_handler.setFormatter(log_fmt)
     logger.addHandler(file_handler)
 
