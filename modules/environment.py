@@ -17,6 +17,10 @@ os.environ['SDL_VIDEODRIVER'] = "x11"
 import ale_py
 import gymnasium as gym
 
+from datetime import datetime, timezone
+from configs.defaults import DEFAULT_DATETIME
+
+# Register ALE before using the Atari ROMs
 gym.register_envs(ale_py)
 
 # CLASSES
@@ -42,12 +46,13 @@ class Environment:
         self.env.action_space.seed(seed)
 
         # Recording wrapper
+        today = datetime.now(tz=timezone.utc).strftime(DEFAULT_DATETIME)
         if display_mode == "record":
             self.env = gym.wrappers.RecordVideo(
                 self.env,
                 episode_trigger=lambda x: True,
                 video_folder=record_dir,
-                name_prefix="recording"
+                name_prefix=f"{today}-rec"
             )
 
         # Add other wrappers to this env
