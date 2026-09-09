@@ -97,7 +97,7 @@ def run(kwargs: dict, lgr: Logger):
 
     lgr.info("running 10 episodes...")
     for i in range(10):
-        obs, info = e.env.reset()
+        obs, info = e.reset()
         done = False
 
         lgr.info(f"Running episdode: {i}...")
@@ -105,8 +105,9 @@ def run(kwargs: dict, lgr: Logger):
             act = e.env.action_space.sample()
             obs, rew, term, trunc, info = e.env.step(act)
             done = term or trunc
-            lgr.info(f"  {act} | {rew}")
+            lgr.info(f"  {act} | {rew}: Done: {done}")
 
+    lgr.info("Finished! Cleaning up...")
     e.env.close()
 
 # MAIN

@@ -16,7 +16,3 @@ Actor for the atari game environment.
 # FUNCTIONS
 
 # CLASSES
-
-# MAIN
-if __name__ == "__main__":
-    pass

@@ -43,13 +43,13 @@ class Environment:
         if display_mode == "record":
             self.env = gym.wrappers.RecordVideo(
                 self.env,
-                episode_trigger=lambda num: num % 2 == 0,
+                episode_trigger=lambda x: True,
                 video_folder=record_dir,
-                name_prefix="recording-"
+                name_prefix="recording"
             )
 
         # Reset environment before running
         self.reset()
 
     def reset(self):
-        self.env.reset()
+        return self.env.reset()
