@@ -26,4 +26,4 @@ DEFAULT_SEED = 278691
 DEFAULT_LOGGER_NAME = "actorgb"
 DEFAULT_LOG_FMT = "%(asctime)s - %(levelname)s - %(message)s"
 DEFAULT_DATETIME = "%Y-%m-%d %H:%M:%S"
-DEFAULT_LOG_DATETIME_PREFIX = "%Y-%m-%d %H:%M"
+DEFAULT_LOG_DATETIME_PREFIX = "%Y-%m-%d_%H:%M"
