@@ -34,6 +34,7 @@ class Environment:
         # Init environment based on display mode (human/rgb_array)
         mode = "human" if display_mode == "human" else "rgb_array"
         self.env = gym.make(game_name, render_mode=mode)
+        self.env.action_space.seed(seed)
 
         # Recording wrapper
         if display_mode == "record":

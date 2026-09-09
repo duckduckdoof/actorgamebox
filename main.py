@@ -11,13 +11,32 @@ Main file for kicking off atari game + actor.
 
 # IMPORTS
 import argparse
+from logging import Logger
 from pprint import pprint
+from typing import Any
 
-import configs.config as cfg
-from environment import Environment
+import configs.globals as globals
+import configs.defaults as defaults
+
+from modules.environment import Environment
+from modules.logging import configure_logger
 
 # FUNCTIONS
-def parse():
+def init_logging(verbose: bool) -> Logger:
+    """
+    Pull logging config defaults and return logger.
+    """
+    lgr_defaults = {
+        'logger_name': defaults.DEFAULT_LOGGER_NAME,
+        'logger_dir': globals.LOGGING_DIR,
+        'log_format_str': defaults.DEFAULT_LOG_FMT,
+        'log_datetime_prefix': defaults.DEFAULT_LOG_DATETIME_PREFIX,
+        'datetime_format': defaults.DEFAULT_DATETIME,
+        'verbose': verbose
+    }
+    return configure_logger(**lgr_defaults)
+
+def parse() -> dict[str, Any]:
     """
     Get all arguments necessary before running.
     """
@@ -28,14 +47,14 @@ def parse():
     # Args
     parser.add_argument(
         "-g", "--game_name",
-        choices=cfg.ROMS,
-        default=cfg.DEFAULT_ROM,
-        help=f"The atari game to choose (default: {cfg.DEFAULT_ROM})"
+        choices=globals.ROMS,
+        default=defaults.DEFAULT_ROM,
+        help=f"The atari game to choose (default: {defaults.DEFAULT_ROM})"
     )
     parser.add_argument(
         "-v", "--verbose",
         action="store_true",
-        help="More verbose output."
+        help="Output to stdout."
     )
     parser.add_argument(
         "-d", "--display-mode",
@@ -45,18 +64,8 @@ def parse():
     )
     parser.add_argument(
         "-r", "--record-dir",
-        default=cfg.RECORDINGS_DIR,
+        default=globals.RECORDINGS_DIR,
         help="Don't show gameplay."
-    )
-    parser.add_argument(
-        "-c", "--config-file",
-        default=cfg.DEFAULT_CONFIG_FILE,
-        help="Name of config file."
-    )
-    parser.add_argument(
-        "-u", "--use-config",
-        action="store_true",
-        help="Use config file instead of parse args."
     )
     parser.add_argument(
         "-m", "--mode",
@@ -66,7 +75,7 @@ def parse():
     )
     parser.add_argument(
         "--seed",
-        default=cfg.DEFAULT_SEED,
+        default=defaults.DEFAULT_SEED,
         help="Default seed for controlling randomness."
     )
 
@@ -75,13 +84,6 @@ def parse():
 
     print("Loading atari gamebox settings...")
 
-    # Load from config file, if indicated
-    if args.use_config:
-        pass
-    else:
-        del args_dict['use_config']
-        del args_dict['config_file']
-
     if args.verbose:
         print("Arguments:")
         pprint(args_dict)
@@ -89,26 +91,30 @@ def parse():
     # Pass the args.
     return args_dict
 
-def run(kwargs: dict):
+def run(kwargs: dict, lgr: Logger):
     """
     Run the environment.
     """
     # Create the environment
+    lgr.info("Initializing environment")
     e = Environment(**kwargs)
 
-    for _ in range(10):
+    lgr.info("running 10 episodes...")
+    for i in range(10):
         obs, info = e.env.reset()
         done = False
 
+        lgr.info(f"Running episdode: {i}...")
         while not done:
             act = e.env.action_space.sample()
             obs, rew, term, trunc, info = e.env.step(act)
             done = term or trunc
-            break
+            lgr.info(f"  {act} | {rew}")
 
     e.env.close()
 
 # MAIN
 if __name__ == "__main__":
     args = parse()
-    run(args)
+    lgr = init_logging(args['verbose'])
+    run(args, lgr)

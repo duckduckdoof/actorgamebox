@@ -14,25 +14,32 @@ Configurations for atari game environment.
 # ROM Info
 ROMS = [
     "ALE/Adventure-v5",
+    "AdventureNoFrameskip-v4",
     "ALE/AirRaid-v5",
+    "AirRaidNoFrameskip-v4",
     "ALE/Breakout-v5",
+    "BreakoutNoFrameskip-v4",
     "ALE/Boxing-v5",
+    "BoxingNoFrameskip-v4",
     "ALE/CrazyClimber-v5",
+    "CrazyClimberNoFrameskip-v4",
     "ALE/Frogger-v5",
+    "FroggerNoFrameskip-v4",
     "ALE/MontezumaRevenge-v5",
+    "MontezumaRevengeNoFrameskip-v4",
     "ALE/Pong-v5",
     "PongNoFrameskip-v4",
     "ALE/Seaquest-v5",
-    "ALE/Surround-v5"
+    "SeaquestNoFrameskip-v4",
+    "ALE/Surround-v5",
+    "SurroundNoFrameskip-v4"
 ]
-
-DEFAULT_ROM = ROMS[7]
 
 # Gameplay recording
 RECORDINGS_DIR = "./recordings/"
 
-# Config file
-DEFAULT_CONFIG_FILE = "./configs/default.ini"
+# Logging
+LOGGING_DIR = "./logs/"
 
-# Seed
-DEFAULT_SEED = 278691
+# Tmp catch-all file
+TMP_DIR = "./tmp/"
