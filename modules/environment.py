@@ -21,6 +21,9 @@ gym.register_envs(ale_py)
 
 # CLASSES
 class Environment:
+    """
+    Wrapper class for gym Atari environment + configs.
+    """
 
     def __init__(
         self,

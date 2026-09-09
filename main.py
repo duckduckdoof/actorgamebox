@@ -12,7 +12,6 @@ Main file for kicking off atari game + actor.
 # IMPORTS
 import argparse
 from logging import Logger
-from pprint import pprint
 from typing import Any
 
 import configs.globals as globals
@@ -60,7 +59,7 @@ def parse() -> dict[str, Any]:
         "-d", "--display-mode",
         choices=["human", "record"],
         default="human",
-        help="Store replays at this location."
+        help="Either show in real-time or record progress."
     )
     parser.add_argument(
         "-r", "--record-dir",
@@ -84,10 +83,6 @@ def parse() -> dict[str, Any]:
 
     print("Loading atari gamebox settings...")
 
-    if args.verbose:
-        print("Arguments:")
-        pprint(args_dict)
-
     # Pass the args.
     return args_dict
 
@@ -96,7 +91,8 @@ def run(kwargs: dict, lgr: Logger):
     Run the environment.
     """
     # Create the environment
-    lgr.info("Initializing environment")
+    lgr.info("Initializing environment...")
+    lgr.info(kwargs)
     e = Environment(**kwargs)
 
     lgr.info("running 10 episodes...")

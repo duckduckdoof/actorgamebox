@@ -7,6 +7,9 @@ Author: Caleb Scott
 
 Configurations for atari game environment.
 
+Globals include things like paths, or any information to be
+made widely available to modules.
+
 """
 
 # CONSTANTS
