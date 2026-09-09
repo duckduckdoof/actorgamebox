@@ -32,7 +32,9 @@ class Environment:
         mode: str,
         record_dir: str,
         verbose: bool,
-        seed: int
+        seed: int,
+        wrappers: list,
+        wrappers_kwargs: dict
     ):
         # Init environment based on display mode (human/rgb_array)
         mode = "human" if display_mode == "human" else "rgb_array"
@@ -47,6 +49,10 @@ class Environment:
                 video_folder=record_dir,
                 name_prefix="recording"
             )
+
+        # Add other wrappers to this env
+        for wrapper in wrappers:
+            self.env = wrapper(env=self.env, **wrappers_kwargs)
 
         # Reset environment before running
         self.reset()

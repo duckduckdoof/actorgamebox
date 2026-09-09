@@ -113,5 +113,7 @@ def run(kwargs: dict, lgr: Logger):
 # MAIN
 if __name__ == "__main__":
     args = parse()
+    args['wrappers'] = defaults.DEFAULT_WRAPPER_STACK
+    args['wrappers_kwargs'] = defaults.DEFAULT_WRAPPER_KWARGS
     lgr = init_logging(args['verbose'])
     run(args, lgr)

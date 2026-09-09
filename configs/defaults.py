@@ -14,6 +14,8 @@ Modify this if you don't want to bother with loquacious argparse args.
 # IMPORTS
 from configs.globals import ROMS
 
+import gymnasium.wrappers as wrp
+
 # CONSTANTS
 
 # Rom selection
@@ -27,3 +29,13 @@ DEFAULT_LOGGER_NAME = "actorgb"
 DEFAULT_LOG_FMT = "%(asctime)s - %(levelname)s - %(message)s"
 DEFAULT_DATETIME = "%Y-%m-%d %H:%M:%S"
 DEFAULT_LOG_DATETIME_PREFIX = "%Y-%m-%d_%H:%M"
+
+# Wrappers for environment
+DEFAULT_WRAPPER_STACK = [
+    wrp.GrayscaleObservation,
+]
+
+# Corresponding kwargs for wrapper stack
+DEFAULT_WRAPPER_KWARGS = [
+    {},
+]
