@@ -34,7 +34,7 @@ class Environment:
         verbose: bool,
         seed: int,
         wrappers: list,
-        wrappers_kwargs: dict
+        wrappers_kwargs: list
     ):
         # Init environment based on display mode (human/rgb_array)
         mode = "human" if display_mode == "human" else "rgb_array"
@@ -51,8 +51,8 @@ class Environment:
             )
 
         # Add other wrappers to this env
-        for wrapper in wrappers:
-            self.env = wrapper(env=self.env, **wrappers_kwargs)
+        for wrapper, kwargs in zip(wrappers, wrappers_kwargs):
+            self.env = wrapper(self.env, **kwargs)
 
         # Reset environment before running
         self.reset()

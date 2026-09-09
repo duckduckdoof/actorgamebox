@@ -112,8 +112,15 @@ def run(kwargs: dict, lgr: Logger):
 
 # MAIN
 if __name__ == "__main__":
+    # Get args
     args = parse()
+
+    # Get any wrappers for env
     args['wrappers'] = defaults.DEFAULT_WRAPPER_STACK
     args['wrappers_kwargs'] = defaults.DEFAULT_WRAPPER_KWARGS
+
+    # Start logger
     lgr = init_logging(args['verbose'])
+
+    # Run the environment!
     run(args, lgr)

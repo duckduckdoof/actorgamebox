@@ -34,7 +34,6 @@ DEFAULT_LOG_DATETIME_PREFIX = "%Y-%m-%d_%H:%M"
 DEFAULT_WRAPPER_STACK = [
     wrp.GrayscaleObservation,
 ]
-
 # Corresponding kwargs for wrapper stack
 DEFAULT_WRAPPER_KWARGS = [
     {},
