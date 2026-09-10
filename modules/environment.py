@@ -59,8 +59,14 @@ class Environment:
         for wrapper, kwargs in zip(wrappers, wrappers_kwargs):
             self.env = wrapper(self.env, **kwargs)
 
-        # Reset environment before running
-        self.reset()
-
     def reset(self):
         return self.env.reset()
+
+    def obs_space(self):
+        return self.env.observation_space
+
+    def act_space(self):
+        return self.env.action_space
+
+    def close(self):
+        self.env.close()

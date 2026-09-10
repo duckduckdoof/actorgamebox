@@ -75,7 +75,7 @@ class CircularReplayBuffer:
 
     def __init__(
         self,
-        obs_shape: tuple,
+        obs_shape: tuple[int, ...],
         obs_type: np.dtype,
         replay_limit: int,
         batch_size: int,
@@ -128,11 +128,16 @@ class CircularReplayBuffer:
 
         # Send sample to GPU
         if to_gpu:
-            torch.from_numpy(s).float().to(self.device)
-            torch.from_numpy(a).float().to(self.device)
-            torch.from_numpy(ns).float().to(self.device)
-            torch.from_numpy(r).float().to(self.device)
-            torch.from_numpy(t).float().to(self.device)
+            ts = torch.from_numpy(s).float().to(self.device)
+            ta = torch.from_numpy(a).float().to(self.device)
+            tns = torch.from_numpy(ns).float().to(self.device)
+            tr = torch.from_numpy(r).float().to(self.device)
+            tt = torch.from_numpy(t).float().to(self.device)
 
-        # Return data for viewing
+            return ts, ta, tns, tr, tt
+
+        # Return data for viewing (remember these aren't from the gpu!)
         return s, a, ns, r, t
+
+    def ready(self):
+        return self.size >= self.batch_size

@@ -21,6 +21,7 @@ def configure_logger(
     logger_name: str,
     logger_dir: str,
     log_format_str: str,
+    log_stdout_str: str,
     log_datetime_prefix: str,
     datetime_format: str,
     verbose: bool
@@ -32,6 +33,7 @@ def configure_logger(
         log_format_str,
         datefmt=datetime_format
     )
+    stdout_fmt = logging.Formatter(log_stdout_str)
 
     # Handlers (file + stdout if flag)
     today = datetime.now(tz=timezone.utc).strftime(log_datetime_prefix)
@@ -41,7 +43,7 @@ def configure_logger(
 
     if verbose:
         stdout_handler = logging.StreamHandler(sys.stdout)
-        stdout_handler.setFormatter(log_fmt)
+        stdout_handler.setFormatter(stdout_fmt)
         logger.addHandler(stdout_handler)
 
     return logger

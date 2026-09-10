@@ -10,13 +10,18 @@ Neural Network declarations, to be used by actors.
 """
 
 # IMPORTS
-import torch
+import logging, torch
 
 from torch import nn
 
 # CONSTANTS
 
 # FUNCTIONS
+def desc_network(net: nn.Module, lgr: logging.Logger):
+    lgr.debug("Describing network module...")
+    for name, param in net.named_parameters():
+        lgr.debug(f"Layer: {name:15} | Shape: {str(param.shape):30} | Requires Grad: {param.requires_grad}")
+    lgr.debug("")
 
 # CLASSES
 class DQN(nn.Module):
@@ -37,7 +42,6 @@ class DQN(nn.Module):
             nn.ReLU(),
             nn.Conv2d(64, 64, 3),
             nn.ReLU(),
-            # This step wasn't included in the original article.
             nn.Flatten(),
             nn.Linear(3136, 512),
             nn.ReLU(),
