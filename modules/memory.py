@@ -35,7 +35,8 @@ class FrameBuffer:
 
     def get(self):
         stk = np.stack(self.frames)
-        return torch.from_numpy(stk)
+        # Remember to add batch dimension.
+        return torch.from_numpy(stk).unsqueeze(0)
         # We may want to do this, although I'd prefer that
         # things like datatype are handled elsewhere.
         # return torch.from_numpy(stk).float()

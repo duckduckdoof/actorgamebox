@@ -27,9 +27,11 @@ def greedy_epsilon(q_net: nn.Module, env: gym.Env, state: torch.Tensor, epsilon:
         return env.action_space.sample()
     else:
         with torch.no_grad():
-            state = state.float().div_(255.).to(device)
+            state = state.float().to(device)
             q_values = q_net(state)
-            predicted_actions = q_values.argmax(dim=1).cpu().numpy()
+            # Since we're doing one action prediction, we index at 0
+            #   This won't be the case if we're doing multi-env selection.
+            predicted_actions = q_values.argmax(dim=1).cpu().numpy()[0]
             return predicted_actions
 
 # CLASSES

@@ -11,6 +11,7 @@ Main file for kicking off atari game + actor.
 
 # IMPORTS
 import argparse, torch
+import torch.nn.functional as F
 from logging import Logger
 from pprint import pformat
 from typing import Any
@@ -154,11 +155,11 @@ def run(kwargs: dict, lgr: Logger):
     episode_reward = 0.0
     episode_step = 0
     num_episodes = 0
-    training = False
 
     lgr.debug("Begin simulation...")
     for i in range(defaults.DEFAULT_NUM_STEPS):
         if done or i == 0:
+            lgr.debug("Resetting episode...")
             obs, _ = env.reset()
 
             # Fill frame buffer on new episode...
@@ -177,19 +178,19 @@ def run(kwargs: dict, lgr: Logger):
 
         # Determine epsilon, given the step in the training.
         epsilon = eps_sched(i)
-        lgr.debug(f"{episode_step}) Epsilon: {epsilon}")
+        lgr.debug(f"GS({i:8}) ES({episode_step:4}) | Epsilon: {epsilon}")
 
         # Get frames from frame buffer
         frames = fb.get()
-        lgr.debug(f"{episode_step}) Current frames: {frames.shape}")
+        # lgr.debug(f"{episode_step}) Current frames: {frames.shape}")
 
         # Determine selected action, using epsilon-greedy strat with Q-network
         act = greedy_epsilon(q_net, env.env, frames, epsilon, device)
-        lgr.debug(f"{episode_step}) Selected action: {act}")
+        lgr.debug(f"GS({i:8}) ES({episode_step:4}) | Selected action: {act}")
 
         # Step the environment, given the selected action.
         next_obs, rew, term, trunc, info = env.env.step(act)
-        lgr.debug(f"{episode_step}) Env: {rew} | {term} | {trunc}")
+        # lgr.debug(f"{episode_step}) Env: {rew} | {term} | {trunc}")
         done = term or trunc
         fb.add(next_obs)
 
@@ -204,16 +205,28 @@ def run(kwargs: dict, lgr: Logger):
 
         # Don't train unless the replay buffer has enough data & we're past the threshold.
         if rb.ready() and i >= defaults.DEFAULT_START_TRAINING_STEP:
-            training = True
-
             # Get batch of obs, act, next_obs, rew, done tuple
             o, a, no, r, d = rb.sample()
-            lgr.debug(f"Sampled from replay buffer: {o.shape}, {a.shape}, {no.shape}, {r.shape}, {d.shape}")
+            # lgr.debug(f"Sampled from replay buffer: {o.shape}, {a.shape}, {no.shape}, {r.shape}, {d.shape}")
+            # lgr.debug(f"Actions: {a[0:5]}")
 
-            pred_q = q_net(o)
+            # Make a prediction for the action, given the observation
+            pred_act = q_net(o)
+            pred_next_act_idxs = q_net(no).argmax(dim=1)
 
-            lgr.debug(f"Predicted actions for batch: {pred_q.shape}")
-            break
+            # Use actual actions taken to get the "value" of those actions
+            pred_act_q = pred_act.gather(1, a.int().unsqueeze(1)).flatten()
+            pred_next_act_q = q_net(no).gather(1, pred_next_act_idxs.unsqueeze(1)).flatten()
+
+            # Discounted rewards, using q-values of actions
+            target_q = r + defaults.DEFAULT_DISCOUNT_RATE * (1-d) * pred_next_act_q
+            loss = F.smooth_l1_loss(pred_act_q, target_q)
+            loss.backward()
+            optim.step()
+            optim.zero_grad()
+
+            episode_loss += loss.item()
+            lgr.debug(f"GS({i:8}) ES({episode_step:4}) | Loss: {episode_loss:5} | Loss/Steps: {episode_loss/episode_step:5}")
 
     lgr.debug("Finished! Cleaning up...")
     env.close()
