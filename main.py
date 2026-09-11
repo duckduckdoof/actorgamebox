@@ -236,6 +236,9 @@ def run(kwargs: dict, lgr: Logger):
     lgr.debug("Finished! Cleaning up...")
     env.close()
 
+    lgr.debug("Saving model...")
+    torch.save(q_net.state_dict(), f"{globals.MODELS_DIR}model_save.pt")
+
 # MAIN
 if __name__ == "__main__":
     # Get args

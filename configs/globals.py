@@ -46,3 +46,6 @@ LOGGING_DIR = "./logs/"
 
 # Tmp catch-all file
 TMP_DIR = "./tmp/"
+
+# Models
+MODELS_DIR = "./models/"
