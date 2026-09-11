@@ -24,6 +24,9 @@ DEFAULT_ROM = ROMS[14]
 # Seed
 DEFAULT_SEED = 278691
 
+# Episode freq for recording
+DEFAULT_EP_REC_FREQ = 10
+
 # Log formatting
 DEFAULT_LOGGER_NAME = "actorgb"
 DEFAULT_LOG_FMT = "%(asctime)s - %(levelname)s - %(message)s"

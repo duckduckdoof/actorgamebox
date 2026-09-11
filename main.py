@@ -91,6 +91,11 @@ def parse() -> dict[str, Any]:
         help="Don't show gameplay."
     )
     parser.add_argument(
+        "-f", "--episode-rec-freq",
+        default=defaults.DEFAULT_EP_REC_FREQ,
+        help="How many episodes to wait for recording."
+    )
+    parser.add_argument(
         "-m", "--mode",
         choices=["train", "test"],
         default="train",
@@ -178,7 +183,7 @@ def run(kwargs: dict, lgr: Logger):
 
         # Determine epsilon, given the step in the training.
         epsilon = eps_sched(i)
-        lgr.debug(f"GS({i:8}) ES({episode_step:4}) | Epsilon: {epsilon}")
+        lgr.debug(f"GS({i:8}) E({num_episodes:4}) ES({episode_step:4}) | Epsilon: {epsilon}")
 
         # Get frames from frame buffer
         frames = fb.get()
@@ -186,7 +191,7 @@ def run(kwargs: dict, lgr: Logger):
 
         # Determine selected action, using epsilon-greedy strat with Q-network
         act = greedy_epsilon(q_net, env.env, frames, epsilon, device)
-        lgr.debug(f"GS({i:8}) ES({episode_step:4}) | Selected action: {act}")
+        lgr.debug(f"GS({i:8}) E({num_episodes:4}) ES({episode_step:4}) | Selected action: {act}")
 
         # Step the environment, given the selected action.
         next_obs, rew, term, trunc, info = env.env.step(act)
@@ -226,7 +231,7 @@ def run(kwargs: dict, lgr: Logger):
             optim.zero_grad()
 
             episode_loss += loss.item()
-            lgr.debug(f"GS({i:8}) ES({episode_step:4}) | Loss: {episode_loss:5} | Loss/Steps: {episode_loss/episode_step:5}")
+            lgr.debug(f"GS({i:8}) E({num_episodes:4}) ES({episode_step:4}) | Loss: {episode_loss:5f} | Loss/Steps: {episode_loss/episode_step:5f}")
 
     lgr.debug("Finished! Cleaning up...")
     env.close()

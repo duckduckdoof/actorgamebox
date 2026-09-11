@@ -37,6 +37,7 @@ class Environment:
         record_dir: str,
         verbose: bool,
         seed: int,
+        episode_rec_freq: int,
         wrappers: list,
         wrappers_kwargs: list
     ):
@@ -50,7 +51,7 @@ class Environment:
         if display_mode == "record":
             self.env = gym.wrappers.RecordVideo(
                 self.env,
-                episode_trigger=lambda x: True,
+                episode_trigger=lambda x: x % episode_rec_freq == 0,
                 video_folder=record_dir,
                 name_prefix=f"{today}-rec"
             )
