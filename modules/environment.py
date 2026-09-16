@@ -63,6 +63,9 @@ class Environment:
     def reset(self):
         return self.env.reset()
 
+    def step(self, act):
+        return self.env.step(act)
+
     def obs_space(self):
         return self.env.observation_space
 

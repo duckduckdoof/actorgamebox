@@ -11,7 +11,6 @@ Main file for kicking off atari game + actor.
 
 # IMPORTS
 import argparse, torch
-import torch.nn.functional as F
 from logging import Logger
 from pprint import pformat
 from typing import Any
@@ -19,7 +18,7 @@ from typing import Any
 import configs.globals as globals
 import configs.defaults as defaults
 
-from modules.actor import EpsilonScheduler, greedy_epsilon
+from modules.actor import EpsilonDQNActor, EpsilonScheduler, greedy_epsilon
 from modules.environment import Environment
 from modules.logging import configure_logger
 from modules.memory import CircularReplayBuffer, FrameBuffer
@@ -148,12 +147,20 @@ def run(kwargs: dict, lgr: Logger):
         exploration_ratio=defaults.DEFAULT_EXPLORATION_FRAC
     )
 
+    actor = EpsilonDQNActor(
+        stacked_frames=obs_shape[0],
+        action_space=env.act_space(),
+        epsilon_sched=eps_sched,
+        epsilon_sched_init_step=0,
+        lr=defaults.DEFAULT_ADAM_LR,
+        discount_rate=defaults.DEFAULT_DISCOUNT_RATE,
+        model_save=f"{globals.MODELS_DIR}model_save.pt",
+        device=device
+    )
+    desc_network(actor.q_net, lgr)
+
     episode_rewards = []
     episode_losses = []
-
-    q_net = DQN(stacked_gray_frames=4, action_space=env.act_space().n).to(device)
-    desc_network(q_net, lgr)
-    optim = torch.optim.Adam(q_net.parameters(), lr=defaults.DEFAULT_ADAM_LR)
 
     done = False
     episode_loss = 0
@@ -182,19 +189,19 @@ def run(kwargs: dict, lgr: Logger):
             done = False
 
         # Determine epsilon, given the step in the training.
-        epsilon = eps_sched(i)
-        lgr.debug(f"GS({i:8}) E({num_episodes:4}) ES({episode_step:4}) | Epsilon: {epsilon}")
+        actor.update_epsilon(i)
+        lgr.debug(f"GS({i:8}) E({num_episodes:4}) ES({episode_step:4}) | Epsilon: {actor.epsilon}")
 
         # Get frames from frame buffer
         frames = fb.get()
         # lgr.debug(f"{episode_step}) Current frames: {frames.shape}")
 
         # Determine selected action, using epsilon-greedy strat with Q-network
-        act = greedy_epsilon(q_net, env.env, frames, epsilon, device)
+        act = actor.action_greedy_epsilon(frames)
         lgr.debug(f"GS({i:8}) E({num_episodes:4}) ES({episode_step:4}) | Selected action: {act}")
 
         # Step the environment, given the selected action.
-        next_obs, rew, term, trunc, info = env.env.step(act)
+        next_obs, rew, term, trunc, info = env.step(act)
         # lgr.debug(f"{episode_step}) Env: {rew} | {term} | {trunc}")
         done = term or trunc
         fb.add(next_obs)
@@ -210,34 +217,14 @@ def run(kwargs: dict, lgr: Logger):
 
         # Don't train unless the replay buffer has enough data & we're past the threshold.
         if rb.ready() and i >= defaults.DEFAULT_START_TRAINING_STEP:
-            # Get batch of obs, act, next_obs, rew, done tuple
-            o, a, no, r, d = rb.sample()
-            # lgr.debug(f"Sampled from replay buffer: {o.shape}, {a.shape}, {no.shape}, {r.shape}, {d.shape}")
-            # lgr.debug(f"Actions: {a[0:5]}")
-
-            # Make a prediction for the action, given the observation
-            pred_act = q_net(o)
-            pred_next_act_idxs = q_net(no).argmax(dim=1)
-
-            # Use actual actions taken to get the "value" of those actions
-            pred_act_q = pred_act.gather(1, a.int().unsqueeze(1)).flatten()
-            pred_next_act_q = q_net(no).gather(1, pred_next_act_idxs.unsqueeze(1)).flatten()
-
-            # Discounted rewards, using q-values of actions
-            target_q = r + defaults.DEFAULT_DISCOUNT_RATE * (1-d) * pred_next_act_q
-            loss = F.smooth_l1_loss(pred_act_q, target_q)
-            loss.backward()
-            optim.step()
-            optim.zero_grad()
-
-            episode_loss += loss.item()
+            episode_loss += actor.train_step(rb.sample())
             lgr.debug(f"GS({i:8}) E({num_episodes:4}) ES({episode_step:4}) | Loss: {episode_loss:5f} | Loss/Steps: {episode_loss/episode_step:5f}")
 
     lgr.debug("Finished! Cleaning up...")
     env.close()
 
     lgr.debug("Saving model...")
-    torch.save(q_net.state_dict(), f"{globals.MODELS_DIR}model_save.pt")
+    actor.save_state()
 
 # MAIN
 if __name__ == "__main__":
