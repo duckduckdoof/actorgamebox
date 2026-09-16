@@ -33,7 +33,6 @@ class Environment:
         self,
         display_mode: str,
         game_name: str,
-        mode: str,
         record_dir: str,
         verbose: bool,
         seed: int,
@@ -42,8 +41,8 @@ class Environment:
         wrappers_kwargs: list
     ):
         # Init environment based on display mode (human/rgb_array)
-        mode = "human" if display_mode == "human" else "rgb_array"
-        self.env = gym.make(game_name, render_mode=mode)
+        d_mode = "human" if display_mode == "human" else "rgb_array"
+        self.env = gym.make(game_name, render_mode=d_mode)
         self.env.action_space.seed(seed)
 
         # Recording wrapper

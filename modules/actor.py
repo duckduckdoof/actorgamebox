@@ -10,7 +10,6 @@ Actor for the atari game environment.
 """
 
 # IMPORTS
-import gymnasium as gym
 import numpy as np
 
 import torch

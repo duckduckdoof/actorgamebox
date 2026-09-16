@@ -18,7 +18,7 @@ from typing import Any
 import configs.globals as globals
 import configs.defaults as defaults
 
-from modules.actor import EpsilonDQNActor, EpsilonScheduler, greedy_epsilon
+from modules.actor import EpsilonDQNActor, EpsilonScheduler
 from modules.environment import Environment
 from modules.logging import configure_logger
 from modules.memory import CircularReplayBuffer, FrameBuffer
@@ -96,9 +96,9 @@ def parse() -> dict[str, Any]:
     )
     parser.add_argument(
         "-m", "--mode",
-        choices=["train", "test"],
+        choices=["train", "eval"],
         default="train",
-        help="Train/Test the actor for the game."
+        help="Train/Evaluate the actor for the game."
     )
     parser.add_argument(
         "--seed",
@@ -114,12 +114,12 @@ def parse() -> dict[str, Any]:
     # Pass the args.
     return args_dict
 
-def run(kwargs: dict, lgr: Logger):
+def train(kwargs: dict, lgr: Logger):
     """
     Run the environment.
     """
     # Create the environment
-    lgr.debug("Initializing environment...")
+    lgr.debug("Initializing environment for TRAINING...")
     lgr.debug(pformat(kwargs, indent=4))
     env = Environment(**kwargs)
     lgr.debug(f"Environment observation space: {env.obs_space()}")
@@ -131,7 +131,7 @@ def run(kwargs: dict, lgr: Logger):
     device = "cuda" if len(cudas) > 0 else "cpu"
 
     fb = FrameBuffer(defaults.DEFAULT_FRAME_LIMIT)
-    obs_shape = (4, *env.obs_space().shape)
+    obs_shape = (defaults.DEFAULT_FRAME_LIMIT, *env.obs_space().shape)
     rb = CircularReplayBuffer(
         obs_shape=obs_shape,
         obs_type=env.obs_space().dtype,
@@ -175,7 +175,7 @@ def run(kwargs: dict, lgr: Logger):
             obs, _ = env.reset()
 
             # Fill frame buffer on new episode...
-            for _ in range(4):
+            for _ in range(defaults.DEFAULT_FRAME_LIMIT):
                 fb.add(obs)
 
             # Add up losses from the prev episode before reset.
@@ -226,6 +226,31 @@ def run(kwargs: dict, lgr: Logger):
     lgr.debug("Saving model...")
     actor.save_state()
 
+def eval(kwargs: dict, lgr: Logger):
+    """
+    Evaluate the performance of the trained model.
+    """
+    # Create the environment
+    lgr.debug("Initializing environment for EVALUATION...")
+    lgr.debug(pformat(kwargs, indent=4))
+    env = Environment(**kwargs)
+
+    state, info = env.reset()
+    fb = FrameBuffer(defaults.DEFAULT_FRAME_LIMIT)
+    for _ in range(defaults.DEFAULT_FRAME_LIMIT): fb.add(state)
+
+    act_net = DQN(defaults.DEFAULT_FRAME_LIMIT, env.act_space().n)
+    act_net.load_state_dict(torch.load(f"{globals.MODELS_DIR}model_save.pt"))
+
+    while True:
+        with torch.no_grad():
+            s = fb.get()
+            act = act_net(s).argmax(dim=1).cpu().flatten()[0]
+        next, rew, term, trunc, info = env.step(act)
+        fb.add(next)
+        if term or trunc:
+            break
+
 # MAIN
 if __name__ == "__main__":
     # Get args
@@ -239,4 +264,9 @@ if __name__ == "__main__":
     lgr = init_logging(args['verbose'])
 
     # Run the environment!
-    run(args, lgr)
+    if args['mode'] == 'train':
+        del args['mode']
+        train(args, lgr)
+    else:
+        del args['mode']
+        eval(args, lgr)
