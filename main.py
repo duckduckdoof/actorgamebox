@@ -5,7 +5,7 @@ Author: Caleb Scott
 
 ---
 
-Main file for kicking off atari game + actor.
+Main file for kicking off atari game + actor training/eval.
 
 """
 
@@ -115,9 +115,6 @@ def parse() -> dict[str, Any]:
     return args_dict
 
 def train(kwargs: dict, lgr: Logger):
-    """
-    Run the environment.
-    """
     # Create the environment
     lgr.debug("Initializing environment for TRAINING...")
     lgr.debug(pformat(kwargs, indent=4))
@@ -227,9 +224,6 @@ def train(kwargs: dict, lgr: Logger):
     actor.save_state()
 
 def eval(kwargs: dict, lgr: Logger):
-    """
-    Evaluate the performance of the trained model.
-    """
     # Create the environment
     lgr.debug("Initializing environment for EVALUATION...")
     lgr.debug(pformat(kwargs, indent=4))

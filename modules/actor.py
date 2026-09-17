@@ -91,9 +91,6 @@ class EpsilonDQNActor:
                 predicted_actions = q_values.argmax(dim=1).cpu().numpy()[0]
                 return predicted_actions
 
-    def action_q_net(self, state):
-        return self.q_net(state)
-
     def train_step(self, sample: tuple):
         """
         Given sampled observation, action, next observation, reward, done,
