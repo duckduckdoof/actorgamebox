@@ -235,6 +235,7 @@ def eval(kwargs: dict, lgr: Logger):
 
     act_net = DQN(defaults.DEFAULT_FRAME_LIMIT, env.act_space().n)
     act_net.load_state_dict(torch.load(f"{globals.MODELS_DIR}model_save.pt"))
+    act_net.eval()
 
     while True:
         with torch.no_grad():
