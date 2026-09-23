@@ -13,13 +13,13 @@ Agent wrapper for actor.
 from dataclasses import dataclass
 from typing import Any, Optional
 
+import envs
 import gymnasium as gym
 import numpy as np
 import torch
+import utils
 from torch import nn
 
-import envs
-import utils
 
 # CLASSES
 @dataclass

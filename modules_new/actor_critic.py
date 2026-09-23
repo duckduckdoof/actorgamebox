@@ -10,17 +10,17 @@ NN Design of the AC module.
 """
 
 # IMPORTS
+import nets
 import torch
+import utils
 from torch import nn
 
-import nets
-import utils
 
 # CLASSES
 class ActorCriticPolicy(nn.Module):
     """ Actor-Critic for discrete action spaces (atari) """
 
-    def __init__(self, x_dim, a_dim, critic, *, compile_, device=None):
+    def __init__(self, x_dim, a_dim, actor, critic, *, compile_, device=None):
         super().__init__()
         self.actor = compile_(Actor(x_dim, a_dim, **actor, device=device))
         self.critic = compile_(nets.ScalarMLP(x_dim, **critic, device=device))

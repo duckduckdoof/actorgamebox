@@ -11,15 +11,15 @@ World Model description.
 
 # IMPORTS
 import gymnasium as gym
+import nets
 import numpy as np
 import torch
 import torch.nn.functional as F
+import utils
 import wandb
 from torch import nn
 from torchvision.utils import make_grid
 
-import nets
-import utils
 
 # CLASSES
 class WorldModel(nn.Module):
