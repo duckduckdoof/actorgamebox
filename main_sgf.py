@@ -12,15 +12,16 @@ Kick-off file for SGF-like training/eval of agent.
 from argparse import ArgumentParser
 from pathlib import Path
 
-import ruamel.yaml as yaml
 import torch
 import wandb
+from ruaml.yaml import yaml
 
 from modules_new import envs, utils
-from modules_new.agent import Agent
 from modules_new.actor_critic import ActorCriticPolicy
-from modules_new.wm import WorldModel
+from modules_new.agent import Agent
 from modules_new.trainer import Trainer
+from modules_new.wm import WorldModel
+
 
 # MAIN
 def main():
