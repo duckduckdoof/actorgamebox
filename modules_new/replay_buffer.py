@@ -15,10 +15,6 @@ import torch
 
 import utils
 
-# CONSTANTS
-
-# FUNCTIONS
-
 # CLASSES
 class ReplayBuffer:
     """ For storing transitions """
