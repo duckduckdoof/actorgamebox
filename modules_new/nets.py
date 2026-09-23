@@ -131,6 +131,34 @@ def parse_dims(dims):
         dims = (dims,)
     return dims
 
+# Weight decay
+def weight_decay_param_groups(module):
+    decay = set()
+    no_decay = set()
+    for mod_name, mod in module.named_modules():
+        for param_name, param in mod.named_parameters():
+            full_param_name = f"{mod_name}.{param_name}" if mod_name else param_name
+            if param_name.endswith('bias') or param_name.startswith('bias_'):
+                no_decay.add(full_param_name)
+            elif param_name.endswith('weight') or param_name.startswith('weight_'):
+                if isinstance(mod, _linear_modules):
+                    decay.add(full_param_name)
+                elif isinstance(mod, _norm_modules):
+                    no_decay.add(full_param_name)
+
+    param_dict = dict(module.named_parameters())
+    inter_params = decay & no_decay
+    union_params = decay | no_decay
+    assert len(inter_params) == 0, f"parameters {str(inter_params)} is in either decay/no decay sets"
+    assert len(param_dict.keys() - union_params) == 0, \
+        f"parameters {str(param_dict.keys() - union_params)} were not seperated to either decay/no decay set"
+
+    return [
+        {'params': [param_dict[name] for name in sorted(decay)]},
+        {'params': [param_dict[name] for name in sorted(no_decay)],
+         'weight_decay': 0.0}
+    ]
+
 # Returns modules for MLP + CNN + TransposeCNN (for upscaling)
 def mlp(in_dim, dims, norm, act, init, out_bias, out_norm, device=None):
     dims = parse_dims(dims)
