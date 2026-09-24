@@ -12,11 +12,12 @@ Wrapper Trainer class for both WM + Actor
 # IMPORTS
 import time
 
-import replay_buffer as rb
 import torch
-import utils
-from agent import AgentTrainer
-from wm import WorldModelTrainer
+
+from modules_new import replay_buffer as rb
+from modules_new import utils
+from modules_new.agent import AgentTrainer
+from modules_new.wm import WorldModelTrainer
 
 
 # CLASSES

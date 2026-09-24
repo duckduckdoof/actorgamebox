@@ -13,7 +13,7 @@ ReplayBuffer to store transitions during gameplay.
 import numpy as np
 import torch
 
-import utils
+from modules_new import utils
 
 # CLASSES
 class ReplayBuffer:

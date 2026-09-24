@@ -14,7 +14,7 @@ from pathlib import Path
 
 import torch
 import wandb
-from ruaml.yaml import yaml
+from ruamel import yaml
 
 from modules_new import envs, utils
 from modules_new.actor_critic import ActorCriticPolicy

@@ -10,10 +10,10 @@ NN Design of the AC module.
 """
 
 # IMPORTS
-import nets
 import torch
-import utils
 from torch import nn
+
+from modules_new import nets, utils
 
 
 # CLASSES

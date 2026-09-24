@@ -15,7 +15,11 @@ Wrappers obtained from SGF repo:
 # IMPORTS
 from functools import partial
 
+# We need to include ale + register in gym
+import ale_py
 import gymnasium as gym
+
+gym.register_envs(ale_py)
 
 
 # FUNCTIONS

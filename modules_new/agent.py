@@ -13,12 +13,12 @@ Agent wrapper for actor.
 from dataclasses import dataclass
 from typing import Any, Optional
 
-import envs
 import gymnasium as gym
 import numpy as np
 import torch
-import utils
 from torch import nn
+
+from modules_new import envs, utils
 
 
 # CLASSES
@@ -50,10 +50,16 @@ class Agent(nn.Module):
     @torch.no_grad()
     def _advance_state(self, state, cont_mask, a):
         stack = state.action_stack
+        # When the stack is None (on init), make a stack of 0s mimicking the datatype of the action chosen.
         if stack is None:
             stack = torch.stack(tuple(torch.zeros_like(a) for _ in range(self.act_stack)), 1)
+
+        # Otherwise, we'll need to shape the mask (init: 1s) to match the size of the stack
         else:
             stack = cont_mask.apply(stack)
+
+        # Add the newly selected action to the stack of copied actions
+        # This applies a shift to the action stack, with the most recent action taken at the end.
         stack = torch.cat([stack[:, 1:], a.unsqueeze(1)], 1)
         stacked_a = stack
         state = AgentState(stack)
