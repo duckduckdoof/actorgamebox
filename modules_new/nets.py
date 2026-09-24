@@ -18,10 +18,8 @@ import torch
 import torch._dynamo
 import torch.nn.functional as F
 import torchvision
-from torch import nn, optim
-
 import utils
-
+from torch import nn, optim
 
 torchvision.disable_beta_transforms_warning()
 import torchvision.transforms.v2

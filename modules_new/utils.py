@@ -12,21 +12,17 @@ From https://github.com/jrobine/sgf/blob/main/src/utils.py
 """
 
 # IMPORTS
+import warnings
 from copy import deepcopy
 from dataclasses import dataclass
-
-from configs.constants import LUMA_VALS
 from functools import singledispatch
 
 import gymnasium as gym
-
 import numpy as np
-
 import torch
 import torch.nn.functional as F
 
-import warnings
-
+from configs.constants import LUMA_VALS
 
 # CONSTANTS
 _numpy_to_torch_dtype_dict = {
@@ -461,7 +457,7 @@ class Aggregator:
     def append(self, metrics):
         def prepare(k, v):
             if not isinstance(k, str):
-                raise ValueError(k)
+                raise TypeError(k)
             if isinstance(v, torch.Tensor):
                 if v.ndim == 0:
                     v = v.reshape(1)
@@ -470,7 +466,7 @@ class Aggregator:
 
         metrics = {k: prepare(k, v) for k, v in metrics.items()}
         if self.history is None:
-            self.history = {k, [v] for k, v in metrics.items()}
+            self.history = {k: [v] for k, v in metrics.items()}
         elif self.same_keys:
             if metrics.keys() != self.history.keys():
                 raise ValueError()

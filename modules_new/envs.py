@@ -17,8 +17,20 @@ from functools import partial
 
 import gymnasium as gym
 
+
 # FUNCTIONS
-def atari_env(game, make, full_action_space, max_frames, noop_max, resolution, grayscale, frame_skip, frame_stack, episodic_life):
+def atari_env(
+        game, 
+        make, 
+        full_action_space, 
+        max_frames, 
+        noop_max, 
+        resolution, 
+        grayscale, 
+        frame_skip, 
+        frame_stack, 
+        episodic_life
+    ):
     """ Shell for creating a generic atari environment """
     if max_frames > 108000:
         raise NotImplementedError("NoFrameskip-v4 does not support max frames > 108000")
