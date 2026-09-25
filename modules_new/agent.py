@@ -51,6 +51,7 @@ class Agent(nn.Module):
     def _advance_state(self, state, cont_mask, a):
         stack = state.action_stack
         # When the stack is None (on init), make a stack of 0s mimicking the datatype of the action chosen.
+        # In the case of atari, '0' as a choice means NOOP.
         if stack is None:
             stack = torch.stack(tuple(torch.zeros_like(a) for _ in range(self.act_stack)), 1)
 

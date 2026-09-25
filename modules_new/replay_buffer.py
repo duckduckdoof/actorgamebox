@@ -15,6 +15,7 @@ import torch
 
 from modules_new import utils
 
+
 # CLASSES
 class ReplayBuffer:
     """ For storing transitions """

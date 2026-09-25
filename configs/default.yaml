@@ -166,7 +166,6 @@ trainer:
     horizon: 10
 
     eval_env:
-      sticky: false
       full_action_space: false
       max_frames: 108000
       noop_max: 1

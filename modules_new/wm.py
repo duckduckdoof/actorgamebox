@@ -74,7 +74,7 @@ class WorldModel(nn.Module):
         if dtype is None:
             dtype = torch.float
 
-        # (N, F, H, W, C) -> (N, F * C, H, W) F=num frames
+        # (B, F, H, W, C) -> (B, F * C, H, W) F=num frames
         o = o.detach().permute(0, 1, 4, 2, 3).flatten(1,2)
 
         if o.dtype != dtype:
@@ -131,6 +131,8 @@ class WorldModel(nn.Module):
 
         return tuple(map(tuple, zip(*history)))
 
+    # By this time, we have preprocessed observations from B, F, C, H, W to
+    # B, F * C, H, W
     def representation_loss(self, ot, next_ot, flat_a, next_r, next_term):
         """ Loss in the predicted representation of the WM. """
 
@@ -232,6 +234,7 @@ class WorldModelTrainer:
         self._optimize = compile_(self._optimize)
         self._optimize_decoder = compile_(self._optimize_decoder)
 
+    # Remember that we have B, F, C, H, W for our observation.
     def _optimize(self, o, stacked_a, next_r, next_term, next_o, it):
         wm = self.wm
 
@@ -246,6 +249,7 @@ class WorldModelTrainer:
                 ot = self.augmentation(o)
                 next_ot = self.augmentation(next_o)
 
+                # Actions are two-D in the stack (ex: [[0, 0, 3, 4]])
                 flat_a = wm.flatten_actions(stacked_a, dtype=dtype)
 
             repr_loss, repr_loss_metrics, yt, next_yt = wm.representation_loss(ot, next_ot, flat_a, next_r, next_term)
