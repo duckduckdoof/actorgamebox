@@ -282,7 +282,7 @@ class LayerNorm(nn.LayerNorm):
             xmu = x - u
             s = xmu.square().mean(1, keepdim=True)
             x = xmu / torch.sqrt(s + self.eps)
-            out = self.weight[: None, None] * x + self.bias[: None, None]
+            out = self.weight[:, None, None] * x + self.bias[:, None, None]
         else:
             out = super().foward(x)
         return out

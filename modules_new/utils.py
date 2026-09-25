@@ -20,6 +20,7 @@ from functools import singledispatch
 import gymnasium as gym
 import numpy as np
 import torch
+import torch._dynamo
 import torch.nn.functional as F
 
 from configs.constants import LUMA_VALS
