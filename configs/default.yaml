@@ -43,7 +43,7 @@ wm:
     out_norm: false
     objective: l2
 
-  transition_predictor:
+  trans_predictor:
     dims: 1024-1024-1024-1024-1024
     norm: layer
     act: silu
@@ -52,7 +52,7 @@ wm:
     out_norm: false
     objective: l2
 
-  reward_predictor:
+  rew_predictor:
     dims: 1024-1024
     norm: layer
     act: silu
@@ -65,7 +65,7 @@ wm:
     low: -15
     high: 15
 
-  terminal_predictor:
+  term_predictor:
     dims: 1024-1024
     norm: layer
     act: silu
@@ -78,8 +78,8 @@ wm:
   sim_coef: 12.5
   var_coef: 25.0
   cov_coef: 1.0
-  reward_coef: 1.0
-  terminal_coef: 1.0
+  rew_coef: 1.0
+  term_coef: 1.0
 
 policy:
   actor:
@@ -105,8 +105,8 @@ policy:
 trainer:
   env_steps: 100000
   init_steps: 5000
-  env_epsilon: 0.01
-  env_temperature: 1.0
+  env_eps: 0.01
+  env_temp: 1.0
   wm_every: 2
   agent_every: 2
   log_every: 100
@@ -129,7 +129,7 @@ trainer:
       weight_decay: 0.001
       clip: 10.0
 
-    transition_optimizer:
+    trans_optimizer:
       type: adamw
       base_lr: 3e-4
       end_lr: 3e-4

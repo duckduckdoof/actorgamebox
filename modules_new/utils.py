@@ -139,6 +139,7 @@ def bins(low, high, num, device=None, decimals=4):
     """ Creates num bins with fixed decimal precision """
     bins = torch.linspace(low, high, num, device=device)
     bins = torch.round(bins, decimals=decimals)
+    return bins
 
 def two_hot(tensor, bins):
     """ Create a two-hot encoding of values in tensor, given bins """

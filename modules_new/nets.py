@@ -510,7 +510,7 @@ class VectorMLP(nn.Module):
         modules, backbone_dim = mlp(in_dim, dims, norm, act, init, out_bias=True, out_norm=True, device=device)
         head_modules, _ = mlp(backbone_dim, [out_dim], norm, 'none', init, out_bias=out_bias, out_norm=out_norm, device=device)
         modules.extend(head_modules)
-        self.mlp = nn.Sequential(modules)
+        self.mlp = nn.Sequential(*modules)
 
     def forward(self, x):
         pred = self.mlp(x)
