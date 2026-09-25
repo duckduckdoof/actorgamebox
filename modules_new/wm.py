@@ -51,7 +51,7 @@ class WorldModel(nn.Module):
 
         self.encoder = compile_(nn.Sequential(*nets.cnn(o_dim, o_res, y_dim, **encoder, memory_format=torch.channels_last, device=device)))
         self.projector = compile_(nets.VectorMLP(y_dim, z_dim, **projector, device=device))
-        self.predictor = compile_(nets.VectorMLP(z_dim + a_dim, y_dim, **predictor, device=device))
+        self.predictor = compile_(nets.VectorMLP(z_dim + a_dim, z_dim, **predictor, device=device))
         self.trans_predictor = compile_(nets.VectorMLP(y_dim + a_dim, y_dim, **trans_predictor, device=device))
         self.rew_predictor = compile_(nets.ScalarMLP(2 * y_dim + a_dim, **rew_predictor, device=device))
         self.term_predictor = compile_(nets.ScalarMLP(2 * y_dim + a_dim, **term_predictor, device=device))
@@ -176,7 +176,8 @@ class WorldModel(nn.Module):
             'reward_loss': reward_loss,
             'terminal_loss': term_loss,
             'representation_loss': repr_loss,
-            'z_std': (pred_r - next_r).abs().mean(),
+            'z_std': ((std1 - std2) / 2).mean(),
+            'reward_mae': (pred_r - next_r).abs().mean(),
             'terminal_acc': (pred_term == next_term).float().mean()
         }
         return repr_loss, metrics, yt, next_yt

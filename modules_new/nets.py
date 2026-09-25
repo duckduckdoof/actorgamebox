@@ -323,6 +323,7 @@ class RandomShift(nn.Module):
             h11 = h1[i]
             out.append(x[i, :, h11:h11 + h, w11:w11 + w])
         out = torch.stack(out, 0)
+        return out
 
 class Sign(nn.Module):
 
