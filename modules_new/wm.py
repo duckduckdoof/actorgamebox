@@ -14,10 +14,10 @@ import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn.functional as F
-import wandb
 from torch import nn
 from torchvision.utils import make_grid
 
+import wandb
 from modules_new import nets, utils
 
 
@@ -66,7 +66,7 @@ class WorldModel(nn.Module):
     def representation_modules(self):
         return (self.encoder, self.projector, self.predictor, self.rew_predictor, self.term_predictor)
 
-    def transition_modaules(self):
+    def transition_modules(self):
         return (self.trans_predictor,)
 
     @torch.no_grad()
@@ -214,7 +214,7 @@ class WorldModelTrainer:
         self.augmentation = compile_(nets.augmentation(augmentation))
 
         self.repr_optim = nets.Optimizer(nn.ModuleList(wm.representation_modules()), **repr_optim, total_its=total_its, autocast=autocast)
-        self.trans_optim = nets.Optimizer(nn.ModuleList(wm.representation_modules()), **trans_optim, total_its=total_its, autocast=autocast)
+        self.trans_optim = nets.Optimizer(nn.ModuleList(wm.transition_modules()), **trans_optim, total_its=total_its, autocast=autocast)
 
         self.init_steps = init_steps
         self.eval_mode = eval_mode
