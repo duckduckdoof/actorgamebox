@@ -116,7 +116,7 @@ class WorldModel(nn.Module):
             inp = torch.cat([y, flat_a], -1)
 
             # Skip connection residuals
-            next_y = y + self.transition_predictor(inp)
+            next_y = y + self.trans_predictor(inp)
 
             inp = torch.cat([y, flat_a, next_y], -1)
             next_r = self.rew_predictor(inp)
