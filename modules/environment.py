@@ -14,16 +14,181 @@ Create and run atari-based environment.
 import os
 os.environ['SDL_VIDEODRIVER'] = "x11"
 
+from datetime import datetime, timezone
+from functools import partial
+
 import ale_py
 import gymnasium as gym
+import numpy as np
 
-from datetime import datetime, timezone
 from configs.defaults import DEFAULT_DATETIME
 
 # Register ALE before using the Atari ROMs
 gym.register_envs(ale_py)
 
+def simple_atari_env(game_name: str, max_episode_steps: int = 108000):
+    """ Much simpler atari environment. """
+    env = gym.make(game_name, full_action_space=False)
+    return gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
+
+def atari_env(
+        game_name: str,
+        episodic_life: bool = False,
+        full_action_space: bool = False,
+        make: bool = True,
+        grayscale: bool = False,
+        frame_skip: int | None = 1,
+        frame_stack: int | None = None,
+        resolution: int | tuple[int, int] | None = None,
+        noop_max: int = 30,
+        max_frames: int = 108000,
+    ):
+    if max_frames > 108000:
+        raise NotImplementedError("NoFrameskip-v4 does not support max frames > 108000")
+
+    atari_args = {
+        'noop_max': noop_max,
+        'frame_skip': frame_skip,
+        'terminal_on_life_loss': False,
+        'grayscale_obs': grayscale,
+        'grayscale_newaxis': True
+    }
+    if resolution:
+        atari_args['screen_size'] = resolution
+
+    env_id = game_name
+    wrappers = [
+        partial(
+            gym.wrappers.TimeLimit,
+            max_episode_steps=max_frames
+        ),
+        partial(
+            gym.wrappers.AtariPreprocessing, 
+            **atari_args
+        ),
+        partial(
+            gym.wrappers.FrameStackObservation,
+            stack_size=frame_stack
+        ) if frame_stack else None
+    ]
+    wrappers = [w for w in wrappers if w]
+
+    if episodic_life:
+        wrappers.append(EpisodicLifeWrapper)
+
+    kwargs = {'full_action_space': full_action_space}
+
+    if make:
+        env = gym.make(env_id, **kwargs)
+        for wrapper in wrappers:
+            env = wrapper(env)
+        return env
+    else:
+        return env_id, wrappers, kwargs
+
+
 # CLASSES
+class FramePatchEnv(gym.Env):
+    """ Custom environment for 'eye' sacchade movements on an individual frame. """
+
+    def __init__(
+            self, 
+            frame: np.ndarray,
+            patch_size: int | tuple[int, int] = 30,
+            patch_pos: tuple[int, int] | np.ndarray = (0,0),
+            random_patch_init: bool = False,
+            mov_scale: float = 1.0,
+        ):
+        if isinstance(patch_size, int):
+            self.patch_size = (patch_size, patch_size)
+        elif isinstance(patch_size, tuple):
+            self.patch_size = patch_size
+        else:
+            raise TypeError("patch_size must be either int or tuple[int, int].")
+
+        # The last dim of frame is color channels (RGB)
+        self.obs_shape = (*self.patch_size, frame.shape[-1])
+        self.observation_space = gym.spaces.Box(0, 255, self.obs_shape, dtype=frame.dtype)
+        self.frame = frame
+
+        self.random_patch_init = random_patch_init
+        if isinstance(patch_pos, tuple):
+            patch_pos = np.array(patch_pos)
+        if np.issubdtype(patch_pos.dtype, np.integer):
+            patch_pos = patch_pos.astype(int)
+
+        # Sanity check initial position
+        if not self._in_bounds(patch_pos):
+            raise ValueError(f"Initial position {patch_pos} must be within bounds: {self._get_bounds()}")
+
+        self.init_patch_pos = patch_pos
+        self.patch_pos = patch_pos
+
+        self.action_space = gym.spaces.Discrete(5)
+
+        self.action_to_displacement = {
+            0: np.array([0., 0.]),    # NOOP
+            1: np.array([1., 0.]),    # DOWN
+            2: np.array([-1., 0.]),   # UP
+            3: np.array([0., 1.]),    # RIGHT
+            4: np.array([0., -1.]),   # LEFT
+        }
+
+        self.mov_scale = mov_scale
+
+    def _get_bounds(self):
+        return self.frame.shape[0] - self.patch_size[0], self.frame.shape[1] - self.patch_size[1]
+
+    def _in_bounds(self, pos: np.ndarray):
+        br = np.array(self._get_bounds())
+        tl = np.array([0,0])
+        return np.all((pos >= tl) & (pos < br))
+
+    def _rand_patch_pos(self):
+        """ Returns a random position within the frame (accounting for patch size) """
+        h, w = self._get_bounds()
+        return self.np_random.integers((0, 0), (h, w))
+
+    def _get_patch(self):
+        """ Given the location of the top-left position of the patch, return the patch. """
+        y, x = self.patch_pos
+        h, w = self.patch_size[0], self.patch_size[1]
+        return self.frame[y:y+h, x:x+w, :]
+
+    def _update_patch_pos(self, disp: np.ndarray):
+        """ Given vector displacement of patch position, update location """
+        updated_pos = self.patch_pos + self.mov_scale * disp
+        if self._in_bounds(updated_pos):
+            self.patch_pos = updated_pos.astype(int)
+
+    def _get_info(self):
+        return {
+            'patch_pos': self.patch_pos,
+            'frame': self.frame,
+            'bounds': self._get_bounds(),
+        }
+
+    def reset(self, seed: int | None = None):
+        """ Starts a new episode. """
+        super().reset(seed=seed)
+
+        if self.random_patch_init:
+            self.patch_pos = self._rand_patch_pos()
+        else:
+            self.patch_pos = self.init_patch_pos
+
+        p = self._get_patch()
+        info = self._get_info()
+        return p, info
+
+    def step(self, action):
+        """ Given selected movement action (sacchade), update which patch on frame. """
+        di = self.action_to_displacement[action]
+        self._update_patch_pos(di)
+        info = self._get_info()
+
+        return self._get_patch(), info
+
 class Environment:
     """
     Wrapper class for gym Atari environment + configs.
@@ -73,3 +238,32 @@ class Environment:
 
     def close(self):
         self.env.close()
+
+class EpisodicLifeWrapper(gym.Wrapper):
+    # different from AtariPreprocessing: real reset only when game over
+
+    def __init__(self, env):
+        super().__init__(env)
+        self.lives = 0
+        self.game_over = True
+
+    def _ale_lives(self):
+        return self.env.unwrapped.ale.lives()
+
+    def reset(self, **kwargs):
+        if self.game_over:
+            o, info = self.env.reset(**kwargs)
+        else:
+            # noop after lost life
+            o, _, _, _, info = self.env.step(0)
+        self.lives = self._ale_lives()
+        return o, info
+
+    def step(self, action):
+        next_o, next_r, next_term, next_trunc, info = self.env.step(action)
+        self.game_over = next_term or next_trunc or self.game_over
+        lives = self._ale_lives()
+        if lives < self.lives and lives > 0:
+            next_term = True
+        self.lives = lives
+        return next_o, next_r, next_term, next_trunc, info
