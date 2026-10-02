@@ -12,9 +12,9 @@ Modify this if you don't want to bother with loquacious argparse args.
 """
 
 # IMPORTS
-from configs.globals import ROMS
-
 import gymnasium.wrappers as wrp
+
+from configs.globals import ROMS
 
 # CONSTANTS
 

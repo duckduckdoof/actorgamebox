@@ -16,6 +16,8 @@ import torch
 from ruamel import yaml
 
 import wandb
+from configs import globals as g
+from modules import environment as e
 from modules_new import envs, utils
 from modules_new.actor_critic import ActorCriticPolicy
 from modules_new.agent import Agent
@@ -24,10 +26,10 @@ from modules_new.wm import WorldModel
 
 
 # MAIN
-def main():
+def main(game=g.ROMS[15]):
     parser = ArgumentParser()
     parser.add_argument("--device", type=str, required=True, help='Device used for training')
-    parser.add_argument("--game", type=str, required=True, help="Choice of Atari game")
+    parser.add_argument("--game", type=str, required=True, default=game, help="Choice of Atari game")
     parser.add_argument("--seed", type=int, required=True, help="Random seed for reproducibility")
     parser.add_argument("--config", type=str, required=True, help="Config file path")
     parser.add_argument("--mode", type=str, nargs='?', help="W&B mode")
@@ -69,11 +71,14 @@ def main():
     # Env, policy, agent, wm
     seed = (config.seed + 42) * 27
     rng = utils.seed_all(seed)
-    env = envs.atari_env(config.game, make=True, **config.env)
+    
+    # Create both game env and sacchade env
+    genv = e.simple_atari_env(config.game, **config.game_env)
+    env = e.EyePatchEnv(screen_env=genv, **config.eye_env)
 
     y_dim = config.wm['y_dim']
     a_dim = env.action_space.n
-    policy = ActorCriticPolicy(
+    g_policy = ActorCriticPolicy(
         y_dim,
         a_dim,
         config.policy['actor'],
@@ -81,15 +86,15 @@ def main():
         compile_=compile_,
         device=device
     )
-    agent = Agent(policy, env.action_space, config.action_stack)
-    wm = WorldModel(env.observation_space, agent.stack_act_space, **config.wm, compile_=compile_, device=device)
+    g_agent = Agent(g_policy, env.action_space, config.action_stack)
+    wm = WorldModel(env.observation_space, g_agent.stack_act_space, **config.wm, compile_=compile_, device=device)
 
     # Trainer
     trainer = Trainer(
         env, 
         config.game,
         wm,
-        agent,
+        g_agent,
         seed,
         **config.trainer,
         wm_eval=config.wm_eval,
@@ -102,7 +107,7 @@ def main():
 
     print(f"Starting... (seed: {seed})")
     print(f"World Model # params: {utils.num_params(wm)}")
-    print(f"Agent       # params: {utils.num_params(agent)}")
+    print(f"Game Agent  # params: {utils.num_params(g_agent)}")
 
     # Train agent and WM
     while not trainer.is_finished():
@@ -117,9 +122,9 @@ def main():
     # Save models if we indicated so
     if config.save:
         torch.save(wm.state_dict(), Path(wandb.run.dir) / 'wm.pt')
-        torch.save(agent.state_dict(), Path(wandb.run.dir) / 'agent.pt')
+        torch.save(g_agent.state_dict(), Path(wandb.run.dir) / 'g_agent.pt')
         wandb.save('wm.pt')
-        wandb.save('agent.pt')
+        wandb.save('g_agent.pt')
         if config.wm_eval == "decoder":
             torch.save(trainer.wm_trainer.decoder.state_dict(), Path(wandb.run.dir) / 'decoder.pt')
             wandb.save('decoder.pt')

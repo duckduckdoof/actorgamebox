@@ -26,10 +26,18 @@ from configs.defaults import DEFAULT_DATETIME
 # Register ALE before using the Atari ROMs
 gym.register_envs(ale_py)
 
-def simple_atari_env(game_name: str, max_episode_steps: int = 108000):
+def simple_atari_env(
+        game_name: str, 
+        max_frames: int = 108000, 
+        full_action_space=False, 
+        episodic_life: bool = True
+    ):
     """ Much simpler atari environment. """
     env = gym.make(game_name, full_action_space=False)
-    return gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
+    env = gym.wrappers.TimeLimit(env, max_episode_steps=max_frames)
+    if episodic_life:
+        env = EpisodicLifeWrapper(env)
+    return env
 
 def atari_env(
         game_name: str,
@@ -88,16 +96,21 @@ def atari_env(
 
 
 # CLASSES
-class FramePatchEnv(gym.Env):
-    """ Custom environment for 'eye' sacchade movements on an individual frame. """
+class EyePatchEnv(gym.Env):
+    """ 
+    Custom environment for 'eye' sacchade movements given
+    frames fed from the overarching game environment.
+    """
 
     def __init__(
             self, 
-            frame: np.ndarray,
+            screen_env: gym.Env,
             patch_size: int | tuple[int, int] = 30,
             patch_pos: tuple[int, int] | np.ndarray = (0,0),
             random_patch_init: bool = False,
             mov_scale: float = 1.0,
+            max_sacchades: int = 10,
+            sacchade_penalty: float = -0.1
         ):
         if isinstance(patch_size, int):
             self.patch_size = (patch_size, patch_size)
@@ -106,10 +119,12 @@ class FramePatchEnv(gym.Env):
         else:
             raise TypeError("patch_size must be either int or tuple[int, int].")
 
+        # Perform sanity checks here if necesssary.
+        self.screen_env = screen_env
+
         # The last dim of frame is color channels (RGB)
-        self.obs_shape = (*self.patch_size, frame.shape[-1])
-        self.observation_space = gym.spaces.Box(0, 255, self.obs_shape, dtype=frame.dtype)
-        self.frame = frame
+        self.obs_shape = (*self.patch_size, 3)
+        self.observation_space = gym.spaces.Box(0, 255, self.obs_shape, dtype=np.uint8)
 
         self.random_patch_init = random_patch_init
         if isinstance(patch_pos, tuple):
@@ -120,21 +135,37 @@ class FramePatchEnv(gym.Env):
         # Sanity check initial position
         if not self._in_bounds(patch_pos):
             raise ValueError(f"Initial position {patch_pos} must be within bounds: {self._get_bounds()}")
-
         self.init_patch_pos = patch_pos
         self.patch_pos = patch_pos
 
-        self.action_space = gym.spaces.Discrete(5)
-
-        self.action_to_displacement = {
+        # Eye movement map from discrete space.
+        self.eye_action_to_displacement = {
             0: np.array([0., 0.]),    # NOOP
             1: np.array([1., 0.]),    # DOWN
             2: np.array([-1., 0.]),   # UP
             3: np.array([0., 1.]),    # RIGHT
             4: np.array([0., -1.]),   # LEFT
+            5: np.array([1., 1.]),    # DOWN_RIGHT
+            6: np.array([-1., 1.]),   # UP_RIGHT
+            7: np.array([-1., -1.]),  # UP_LEFT
+            8: np.array([1., -1.]),   # DOWN_LEFT
         }
 
+        # Organize action spaces for eye + game
+        self.game_action_space = screen_env.action_space
+        self.eye_action_space = gym.spaces.Discrete(len(self.eye_action_to_displacement))
+        total_actions = self.game_action_space.n + self.eye_action_space.n
+        self.action_space = gym.spaces.Discrete(total_actions)
+
+        # Sacchade movement scale
         self.mov_scale = mov_scale
+
+        # Reset iterations
+        self.eye_itrs, self.game_itrs = 0, 0
+
+        # Sacchade tracking + penalty
+        self.max_sacchades = max_sacchades
+        self.sacchade_penalty = sacchade_penalty
 
     def _get_bounds(self):
         return self.frame.shape[0] - self.patch_size[0], self.frame.shape[1] - self.patch_size[1]
@@ -166,11 +197,18 @@ class FramePatchEnv(gym.Env):
             'patch_pos': self.patch_pos,
             'frame': self.frame,
             'bounds': self._get_bounds(),
+            'eye_itrs': self.eye_itrs,
+            'game_itrs': self.game_itrs
         }
 
     def reset(self, seed: int | None = None):
         """ Starts a new episode. """
         super().reset(seed=seed)
+
+        self.eye_itrs, self.game_itrs = 0, 0
+
+        # Reset the game environment + eye postition on frame.
+        self.frame, _ = self.screen_env.reset()
 
         if self.random_patch_init:
             self.patch_pos = self._rand_patch_pos()
@@ -181,13 +219,33 @@ class FramePatchEnv(gym.Env):
         info = self._get_info()
         return p, info
 
-    def step(self, action):
-        """ Given selected movement action (sacchade), update which patch on frame. """
-        di = self.action_to_displacement[action]
+    def _eye_act(self, action):
+        """ Eye sacchade movement. """
+        self.eye_itrs += 1
+        di = self.eye_action_to_displacement[action]
         self._update_patch_pos(di)
+        obs = self._get_patch()
+        penalty = self.sacchade_penalty
+        return obs, penalty, False, False
+
+    def _game_act(self, action):
+        """ Game actions. """
+        self.eye_itrs = 0
+        self.game_itrs += 1
+        self.frame, rew, term, trunc, _ = self.screen_env.step(action)
+        obs = self._get_patch()
+        return obs, rew, term, trunc
+
+    def step(self, action):
+        # Filter which environment we are affecting (eye vs. game)
+        eas = self.eye_action_space
+        act = self._eye_act if action <= eas else self._game_act
+        action = action if action <= eas else action - eas
+        
+        obs, rew, term, trunc = act(action)
         info = self._get_info()
 
-        return self._get_patch(), info
+        return obs, rew, term, trunc, info
 
 class Environment:
     """

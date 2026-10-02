@@ -250,7 +250,7 @@ class WorldModelTrainer:
                 ot = self.augmentation(o)
                 next_ot = self.augmentation(next_o)
 
-                # Actions are two-D in the stack (ex: [[0, 0, 3, 4]])
+                # Actions are two-D in the stack (B, Act_stack) (ex: [[0, 0, 3, 4]])
                 flat_a = wm.flatten_actions(stacked_a, dtype=dtype)
 
             repr_loss, repr_loss_metrics, yt, next_yt = wm.representation_loss(ot, next_ot, flat_a, next_r, next_term)
