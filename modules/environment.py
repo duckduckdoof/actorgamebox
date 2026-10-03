@@ -100,6 +100,12 @@ class EyePatchEnv(gym.Env):
     """ 
     Custom environment for 'eye' sacchade movements given
     frames fed from the overarching game environment.
+
+    For this project, it is expected that there is a framestack dimension:
+    (F, C, H, W)
+
+    We give (H, W, C), so a dimension is added, but this must be reflected
+    in the config YAML file.
     """
 
     def __init__(
@@ -208,7 +214,7 @@ class EyePatchEnv(gym.Env):
         if not self._in_bounds(self.patch_pos):
             raise ValueError(f"Initial position {self.patch_pos} must be within bounds: {self._get_bounds()}")
 
-        p = self._get_patch()
+        p = self._get_patch().unflatten(0)
         info = self._get_info()
         return p, info
 
@@ -236,6 +242,7 @@ class EyePatchEnv(gym.Env):
         action = action if action <= eas else action - eas
         
         obs, rew, term, trunc = act(action)
+        obs = obs.unflatten(0)
         info = self._get_info()
 
         return obs, rew, term, trunc, info

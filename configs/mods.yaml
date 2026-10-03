@@ -10,16 +10,6 @@ eye_env:
   max_sacchades: 10
   sacchade_penalty: -0.1
 
-env:
-  full_action_space: false
-  max_frames: 20000
-  noop_max: 30
-  resolution: 64
-  grayscale: false
-  frame_skip: 4
-  frame_stack: 4
-  episodic_life: true
-
 wm:
   y_dim: 512
   z_dim: 2048

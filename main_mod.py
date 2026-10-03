@@ -9,6 +9,7 @@ Kick-off file for SGF-like training/eval of agent.
 """
 
 # IMPORTS
+import pprint
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -63,6 +64,10 @@ def main(game=g.ROMS[15]):
     wandb.init(project=args.project, mode=args.mode, notes=args.notes, config=config)
     config = wandb.config
 
+    print("Config:")
+    pprint.pp(config.as_dict())
+    print()
+
     # Device, autocast, compile
     device = torch.device(args.device)
     autocast = lambda: torch.autocast(device_type=device.type, enabled=config.amp)
@@ -75,6 +80,9 @@ def main(game=g.ROMS[15]):
     # Create both game env and sacchade env
     genv = e.simple_atari_env(config.game, **config.game_env)
     env = e.EyePatchEnv(screen_env=genv, **config.eye_env)
+
+    print(f"Observation space: {env.observation_space.shape}")
+    print(f"Action space: {env.action_space}\n")
 
     y_dim = config.wm['y_dim']
     a_dim = env.action_space.n
@@ -105,7 +113,7 @@ def main(game=g.ROMS[15]):
         compile_=compile_
     )
 
-    print(f"Starting... (seed: {seed})")
+    print(f"Starting... (seed: {seed})\n")
     print(f"World Model # params: {utils.num_params(wm)}")
     print(f"Game Agent  # params: {utils.num_params(g_agent)}")
 
@@ -117,7 +125,7 @@ def main(game=g.ROMS[15]):
             wandb.log(metrics, step=trainer.it)
 
         if trainer.it == 0:
-            print("Training...")
+            print("Training...\n")
 
     # Save models if we indicated so
     if config.save:
