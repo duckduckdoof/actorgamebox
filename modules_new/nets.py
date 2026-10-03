@@ -284,7 +284,7 @@ class LayerNorm(nn.LayerNorm):
             x = xmu / torch.sqrt(s + self.eps)
             out = self.weight[:, None, None] * x + self.bias[:, None, None]
         else:
-            out = super().foward(x)
+            out = super().forward(x)
         return out
 
 # Define accepted modules, including custom classes.

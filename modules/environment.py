@@ -239,8 +239,8 @@ class EyePatchEnv(gym.Env):
     def step(self, action):
         # Filter which environment we are affecting (eye vs. game)
         eas = self.eye_action_space.n
-        act = self._eye_act if action <= eas else self._game_act
-        action = action if action <= eas else action - eas
+        act = self._eye_act if action < eas else self._game_act
+        action = action if action < eas else action - eas
         
         obs, rew, term, trunc = act(action)
         obs = np.expand_dims(obs, axis=0)
