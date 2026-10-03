@@ -128,7 +128,7 @@ class EyePatchEnv(gym.Env):
         self.screen_env = screen_env
 
         # The last dim of frame is color channels (RGB)
-        self.obs_shape = (*self.patch_size, 3)
+        self.obs_shape = (1, *self.patch_size, 3)
         self.observation_space = gym.spaces.Box(0, 255, self.obs_shape, dtype=np.uint8)
 
         if isinstance(patch_pos, tuple):
