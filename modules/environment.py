@@ -107,7 +107,6 @@ class EyePatchEnv(gym.Env):
             screen_env: gym.Env,
             patch_size: int | tuple[int, int] = 30,
             patch_pos: tuple[int, int] | np.ndarray = (0,0),
-            random_patch_init: bool = False,
             mov_scale: float = 1.0,
             max_sacchades: int = 10,
             sacchade_penalty: float = -0.1
@@ -126,16 +125,12 @@ class EyePatchEnv(gym.Env):
         self.obs_shape = (*self.patch_size, 3)
         self.observation_space = gym.spaces.Box(0, 255, self.obs_shape, dtype=np.uint8)
 
-        self.random_patch_init = random_patch_init
         if isinstance(patch_pos, tuple):
             patch_pos = np.array(patch_pos)
         if np.issubdtype(patch_pos.dtype, np.integer):
             patch_pos = patch_pos.astype(int)
 
         # Sanity check initial position
-        if not self._in_bounds(patch_pos):
-            raise ValueError(f"Initial position {patch_pos} must be within bounds: {self._get_bounds()}")
-        self.init_patch_pos = patch_pos
         self.patch_pos = patch_pos
 
         # Eye movement map from discrete space.
@@ -210,10 +205,8 @@ class EyePatchEnv(gym.Env):
         # Reset the game environment + eye postition on frame.
         self.frame, _ = self.screen_env.reset()
 
-        if self.random_patch_init:
-            self.patch_pos = self._rand_patch_pos()
-        else:
-            self.patch_pos = self.init_patch_pos
+        if not self._in_bounds(self.patch_pos):
+            raise ValueError(f"Initial position {self.patch_pos} must be within bounds: {self._get_bounds()}")
 
         p = self._get_patch()
         info = self._get_info()
@@ -238,7 +231,7 @@ class EyePatchEnv(gym.Env):
 
     def step(self, action):
         # Filter which environment we are affecting (eye vs. game)
-        eas = self.eye_action_space
+        eas = self.eye_action_space.n
         act = self._eye_act if action <= eas else self._game_act
         action = action if action <= eas else action - eas
         
