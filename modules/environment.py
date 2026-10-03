@@ -214,7 +214,8 @@ class EyePatchEnv(gym.Env):
         if not self._in_bounds(self.patch_pos):
             raise ValueError(f"Initial position {self.patch_pos} must be within bounds: {self._get_bounds()}")
 
-        p = self._get_patch().unflatten(0)
+        p = self._get_patch()
+        p = np.expand_dims(p, axis=0)
         info = self._get_info()
         return p, info
 
@@ -242,7 +243,7 @@ class EyePatchEnv(gym.Env):
         action = action if action <= eas else action - eas
         
         obs, rew, term, trunc = act(action)
-        obs = obs.unflatten(0)
+        obs = np.expand_dims(obs, axis=0)
         info = self._get_info()
 
         return obs, rew, term, trunc, info
