@@ -158,7 +158,7 @@ class WorldModel(nn.Module):
         inp = torch.cat([yt, flat_a, next_yt], -1)
         reward_stats = self.rew_predictor.get_stats(inp, full_precision=True)
         reward_loss = self.rew_predictor.loss(reward_stats, next_r)
-        term_stats = self.term_predictor.get_states(inp, full_precision=True)
+        term_stats = self.term_predictor.get_stats(inp, full_precision=True)
         term_loss = self.term_predictor.loss(term_stats, next_r)
 
         repr_loss = self.sim_coef * sim_loss + self.var_coef * var_loss + self.cov_coef * cov_loss + \

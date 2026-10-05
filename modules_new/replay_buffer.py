@@ -147,6 +147,8 @@ class ReplayBuffer:
     def get_stats(self):
         """ Buffer statistics, from episode rewards """
         episode_rewards = np.array(self.episode_rewards)
+        print(f"Episode rewards: {episode_rewards}")
+        print(f"Capacity: {self.len}/{self.capacity()}")
         return {
             'buffer_size': self.len,
             'buffer_episodes': len(episode_rewards),

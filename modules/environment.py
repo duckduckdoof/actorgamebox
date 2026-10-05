@@ -222,6 +222,9 @@ class EyePatchEnv(gym.Env):
     def _eye_act(self, action):
         """ Eye sacchade movement. """
         self.eye_itrs += 1
+        if self.eye_itrs >= self.max_sacchades:
+            print("We've looked around too much and spent too much time. Penalize.")
+
         di = self.eye_action_to_displacement[action]
         self._update_patch_pos(di)
         obs = self._get_patch()
