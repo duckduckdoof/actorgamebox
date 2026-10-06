@@ -12,6 +12,7 @@ From https://github.com/jrobine/sgf/blob/main/src/utils.py
 """
 
 # IMPORTS
+import os
 import warnings
 from copy import deepcopy
 from dataclasses import dataclass
@@ -21,6 +22,7 @@ import gymnasium as gym
 import numpy as np
 import torch
 import torch._dynamo
+import torch.distributed as dist
 import torch.nn.functional as F
 
 from configs.constants import LUMA_VALS
@@ -54,17 +56,29 @@ def np_to_torch_dtype(np_dtype):
     except KeyError:
         return _numpy_to_torch_dtype_dict[np_dtype.type]
 
+# Parallel Processing for multi-gpu work.
+def setup_distributed():
+    dist.init_process_group(backend="nccl")
+    l_rank = int(os.environ['LOCAL_RANK'])
+    torch.cuda.set_device(l_rank)
+    return l_rank
+
+def cleanup_devices():
+    dist.destroy_process_group()
+
 # Seeding.
 
 def rng(seed):
     """ Generator, given seed """
     return np.random.Generator(np.random.PCG64(seed))
 
-def seed_all(seed):
+def seed_all(seed, local_rank):
     """ Seed every rng we have """
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    return rng(seed)
+    r_seed = seed + local_rank
+    torch.manual_seed(r_seed)
+    torch.cuda.manual_seed_all(r_seed)
+    np.random.seed(r_seed)
+    return rng(r_seed)
 
 # Helpful mathematical functions.
 

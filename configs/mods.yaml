@@ -1,4 +1,4 @@
-action_stack: 4
+action_stack: 1
 
 game_env:
   full_action_space: false
@@ -171,8 +171,8 @@ trainer:
       noop_max: 1
       resolution: 64
       grayscale: false
-      frame_skip: 4
-      frame_stack: 4
+      frame_skip: 1
+      frame_stack: 1
       episodic_life: false
     eval_num_parallel: 20
     eval_temperature: 0.5
