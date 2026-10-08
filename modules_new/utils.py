@@ -71,7 +71,10 @@ def cleanup_devices():
     dist.destroy_process_group()
 
 def compile_ddp(mod, disable, l_rank=None):
-    has_grad_params = any(p.requires_grad() for p in mod.parameters())
+    if callable(mod):
+        has_grad_params = True
+    else:
+        has_grad_params = any(p.requires_grad for p in mod.parameters())
     if has_grad_params and l_rank:
         md = DDP(mod, device_ids=[l_rank])
     else:

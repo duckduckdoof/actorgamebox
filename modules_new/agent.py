@@ -18,7 +18,6 @@ import numpy as np
 import torch
 from torch import nn
 
-from modules import environment as e
 from modules_new import utils
 
 
@@ -84,7 +83,7 @@ class Agent(nn.Module):
 
 class AgentTrainer:
 
-    def __init__(self, game, agent, world_model, replay_buffer, batch_size, horizon, policy_trainer,
+    def __init__(self, env_select, game, agent, world_model, replay_buffer, batch_size, horizon, policy_trainer,
                 eval_env, eval_num_parallel, eval_temperature, eval_epsilon, eval_episodes,
                 final_eval_episodes, eval_mode, *, total_its, rng, autocast, compile_=None):
         if eval_mode not in ('none', 'final', 'all'):
@@ -104,7 +103,7 @@ class AgentTrainer:
         self.autocast = autocast
 
         if eval_mode in ('all', 'final'):
-            eval_env_id, eval_env_wrappers, eval_env_kwargs = e.eye_env(game, make=False, **eval_env)
+            eval_env_id, eval_env_wrappers, eval_env_kwargs = env_select(game, make=False, **eval_env)
             self.eval_collector = utils.EpisodeCollector(eval_env_id, eval_env_wrappers, eval_env_kwargs, eval_num_parallel)
 
         self.policy_trainer = agent.policy.create_trainer(

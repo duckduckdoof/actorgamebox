@@ -14,7 +14,6 @@ from argparse import ArgumentParser
 from functools import partial
 from pathlib import Path
 
-import randomname
 import torch
 import torch.distributed as dist
 from ruamel import yaml
@@ -87,14 +86,13 @@ def main(game=g.ROMS[15]):
 
     # W&B setup
     if config['more_gpu']:
-        exp_name = randomname.get_name()
         run_id = os.environ.get("TORCH_RUN_ID", "unique_job_id")
         wandb.init(
             project=args.project, 
             mode=args.mode, 
             notes=args.notes, 
             config=config,
-            group=f"{exp_name}-{run_id}",
+            group=f"exp-{run_id}",
             name=f"gpu-{os.environ.get('RANK', '0')}"
         )
     else:
@@ -111,7 +109,8 @@ def main(game=g.ROMS[15]):
     rng = utils.seed_all(seed, local_rank=l_rank if l_rank else 0)
     
     # Create eye-sacchade game wrapper env
-    env = e.eye_env(config.game, **config.env)
+    env_selection = e.eye_env
+    env = env_selection(config.game, **config.env)
 
     print(f"Observation space: {env.observation_space.shape}")
     print(f"Action space: {env.action_space}\n")
@@ -132,6 +131,7 @@ def main(game=g.ROMS[15]):
     # Trainer
     trainer = Trainer(
         env, 
+        env_selection,
         config.game,
         wm,
         g_agent,

@@ -24,7 +24,7 @@ from modules_new.wm import WorldModelTrainer
 class Trainer:
     """ Trainer class for both WM and Actor """
 
-    def __init__(self, env, game, wm, agent, seed, env_steps, init_steps, env_eps, env_temp,
+    def __init__(self, env, env_select, game, wm, agent, seed, env_steps, init_steps, env_eps, env_temp,
                 wm_every, agent_every, log_every, eval_every, wm_trainer, agent_trainer,
                 wm_eval, agent_eval, buffer_device, *, rng, autocast, compile_):
         self.env = env
@@ -59,7 +59,7 @@ class Trainer:
             total_its=env_steps, rng=rng, autocast=autocast, compile_=compile_
         )
         self.agent_trainer = AgentTrainer(
-            game, agent, wm, replay_buffer, **agent_trainer,
+            env_select, game, agent, wm, replay_buffer, **agent_trainer,
             eval_mode=agent_eval, total_its=env_steps, rng=rng, autocast=autocast, compile_=compile_
         )
 

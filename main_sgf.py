@@ -14,7 +14,6 @@ from argparse import ArgumentParser
 from functools import partial
 from pathlib import Path
 
-import randomname
 import torch
 import torch.distributed as dist
 from ruamel import yaml
@@ -83,14 +82,13 @@ def main():
 
     # W&B setup
     if config['more_gpu']:
-        exp_name = randomname.get_name()
         run_id = os.environ.get("TORCH_RUN_ID", "unique_job_id")
         wandb.init(
             project=args.project, 
             mode=args.mode, 
             notes=args.notes, 
             config=config,
-            group=f"{exp_name}-{run_id}",
+            group=f"exp-{run_id}",
             name=f"gpu-{os.environ.get('RANK', '0')}"
         )
     else:
@@ -106,7 +104,8 @@ def main():
     seed = (config.seed + 42) * 27
     rng = utils.seed_all(seed, local_rank=l_rank if l_rank else 0)
 
-    env = envs.atari_env(config.game, make=True, **config.env)
+    env_selection = envs.atari_env
+    env = env_selection(config.game, make=True, **config.env)
 
     y_dim = config.wm['y_dim']
     a_dim = env.action_space.n
@@ -124,6 +123,7 @@ def main():
     # Trainer
     trainer = Trainer(
         env, 
+        env_selection,
         config.game,
         wm,
         agent,
