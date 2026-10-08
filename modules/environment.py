@@ -30,14 +30,77 @@ def simple_atari_env(
         game_name: str, 
         max_frames: int = 108000, 
         full_action_space=False, 
-        episodic_life: bool = True
+        episodic_life: bool = True,
+        make=True
     ):
     """ Much simpler atari environment. """
-    env = gym.make(game_name, full_action_space=False)
-    env = gym.wrappers.TimeLimit(env, max_episode_steps=max_frames)
-    if episodic_life:
-        env = EpisodicLifeWrapper(env)
-    return env
+    env_id = game_name
+    env = gym.make(env_id, full_action_space=False)
+    wrappers = [
+        partial(
+            gym.wrappers.TimeLimit,
+            max_episode_steps=max_frames
+        ),
+        EpisodicLifeWrapper if episodic_life else None
+    ]
+    wrappers = [w for w in wrappers if w]
+    kwargs = {'full_action_space': full_action_space}
+
+    if make:
+        env = gym.make(env_id, **kwargs)
+        for wrapper in wrappers:
+            env = wrapper(env)
+        return env
+    else:
+        return env_id, wrappers, kwargs
+
+def eye_env(
+        # Gym game args
+        game_name: str,
+        max_frames: int = 108000, 
+        full_action_space=False, 
+        episodic_life: bool = True,
+
+        # Eye env args
+        patch_size: int | tuple[int, int] = 30,
+        patch_pos: tuple[int, int] | np.ndarray = (0,0),
+        mov_scale: float = 1.0,
+        max_sacchades: int = 10,
+        sacchade_penalty: float = -0.1,
+
+        # Make the game or set it up for later
+        make=True
+    ):
+    """
+    Atari environment, including eye sacchade wrapper for additional actions.
+    """
+    env_id = game_name
+    env = gym.make(env_id, full_action_space=False)
+    wrappers = [
+        partial(
+            gym.wrappers.TimeLimit,
+            max_episode_steps=max_frames
+        ),
+        EpisodicLifeWrapper if episodic_life else None,
+        partial(
+            EyePatchWrapper,
+            patch_size=patch_size,
+            patch_pos=patch_pos,
+            mov_scale=mov_scale,
+            max_sacchades=max_sacchades,
+            sacchade_penalty=sacchade_penalty
+        )
+    ]
+    wrappers = [w for w in wrappers if w]
+    kwargs = {'full_action_space': full_action_space}
+
+    if make:
+        env = gym.make(env_id, **kwargs)
+        for wrapper in wrappers:
+            env = wrapper(env)
+        return env
+    else:
+        return env_id, wrappers, kwargs
 
 def atari_env(
         game_name: str,
@@ -96,9 +159,9 @@ def atari_env(
 
 
 # CLASSES
-class EyePatchEnv(gym.Env):
+class EyePatchWrapper(gym.Wrapper):
     """ 
-    Custom environment for 'eye' sacchade movements given
+    Custom environment wrapper for 'eye' sacchade movements given
     frames fed from the overarching game environment.
 
     For this project, it is expected that there is a framestack dimension:
@@ -110,22 +173,23 @@ class EyePatchEnv(gym.Env):
 
     def __init__(
             self, 
-            screen_env: gym.Env,
+            env: gym.Env,
             patch_size: int | tuple[int, int] = 30,
             patch_pos: tuple[int, int] | np.ndarray = (0,0),
             mov_scale: float = 1.0,
             max_sacchades: int = 10,
             sacchade_penalty: float = -0.1
         ):
+        super().__init__(env)
+        self.game_env = env
+
+        # Perform sanity checks here.
         if isinstance(patch_size, int):
             self.patch_size = (patch_size, patch_size)
         elif isinstance(patch_size, tuple):
             self.patch_size = patch_size
         else:
             raise TypeError("patch_size must be either int or tuple[int, int].")
-
-        # Perform sanity checks here if necesssary.
-        self.screen_env = screen_env
 
         # The last dim of frame is color channels (RGB)
         self.obs_shape = (1, *self.patch_size, 3)
@@ -153,7 +217,7 @@ class EyePatchEnv(gym.Env):
         }
 
         # Organize action spaces for eye + game
-        self.game_action_space = screen_env.action_space
+        self.game_action_space = env.action_space
         self.eye_action_space = gym.spaces.Discrete(len(self.eye_action_to_displacement))
         total_actions = self.game_action_space.n + self.eye_action_space.n
         self.action_space = gym.spaces.Discrete(total_actions)
@@ -209,7 +273,7 @@ class EyePatchEnv(gym.Env):
         self.eye_itrs, self.game_itrs = 0, 0
 
         # Reset the game environment + eye postition on frame.
-        self.frame, _ = self.screen_env.reset()
+        self.frame, _ = self.game_env.reset()
 
         if not self._in_bounds(self.patch_pos):
             raise ValueError(f"Initial position {self.patch_pos} must be within bounds: {self._get_bounds()}")
@@ -235,7 +299,7 @@ class EyePatchEnv(gym.Env):
         """ Game actions. """
         self.eye_itrs = 0
         self.game_itrs += 1
-        self.frame, rew, term, trunc, _ = self.screen_env.step(action)
+        self.frame, rew, term, trunc, _ = self.game_env.step(action)
         obs = self._get_patch()
         return obs, rew, term, trunc
 

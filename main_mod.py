@@ -88,9 +88,8 @@ def main(game=g.ROMS[15]):
     seed = (config.seed + 42) * 27
     rng = utils.seed_all(seed, local_rank=l_rank if l_rank else 0)
     
-    # Create both game env and sacchade env
-    genv = e.simple_atari_env(config.game, **config.game_env)
-    env = e.EyePatchEnv(screen_env=genv, **config.eye_env)
+    # Create eye-sacchade game wrapper env
+    env = e.eye_env(config.game, **config.env)
 
     print(f"Observation space: {env.observation_space.shape}")
     print(f"Action space: {env.action_space}\n")

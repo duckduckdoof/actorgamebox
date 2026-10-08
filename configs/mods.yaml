@@ -1,11 +1,10 @@
 action_stack: 1
 
-game_env:
+env: &game_env
   full_action_space: false
   max_frames: 20000
-
-eye_env:
-  patch_size: 32
+  episodic_life: False
+  patch_size: 64
   mov_scale: 16.0
   max_sacchades: 10
   sacchade_penalty: -0.1
@@ -116,8 +115,8 @@ trainer:
     batch_size: 1024
 
     augmentation:
-      - { type: random_shift, shift: 3 }
-      - { type: random_intensity, scale: 0.05 }
+      - {}
+      - {}
 
     repr_optim:
       type: adamw
@@ -166,14 +165,8 @@ trainer:
     horizon: 10
 
     eval_env:
-      full_action_space: false
-      max_frames: 108000
-      noop_max: 1
-      resolution: 64
-      grayscale: false
-      frame_skip: 1
-      frame_stack: 1
-      episodic_life: false
+      <<: *game_env
+
     eval_num_parallel: 20
     eval_temperature: 0.5
     eval_epsilon: 0.0
