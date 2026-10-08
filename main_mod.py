@@ -17,7 +17,6 @@ from pathlib import Path
 import torch
 import torch.distributed as dist
 from ruamel import yaml
-from torch.nn.parallel import DistributedDataParallel as DDP
 
 import wandb
 from configs import globals as g
