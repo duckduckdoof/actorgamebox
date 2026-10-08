@@ -27,6 +27,7 @@ import torch.distributed as dist
 import torch.nn.functional as F
 from IPython.display import HTML
 from matplotlib.animation import FuncAnimation
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 from configs.constants import LUMA_VALS
 
@@ -68,6 +69,14 @@ def setup_distributed():
 
 def cleanup_devices():
     dist.destroy_process_group()
+
+def compile_ddp(mod, disable, l_rank=None):
+    has_grad_params = any(p.requires_grad() for p in mod.parameters())
+    if has_grad_params and l_rank:
+        md = DDP(mod, device_ids=[l_rank])
+    else:
+        md = mod
+    return torch.compile(md, dynamic=True, disable=disable)
 
 # Seeding.
 

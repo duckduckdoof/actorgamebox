@@ -9,12 +9,15 @@ Kick-off file for SGF-like training/eval of agent.
 """
 
 # IMPORTS
+import os
 from argparse import ArgumentParser
+from functools import partial
 from pathlib import Path
 
+import randomname
 import torch
+import torch.distributed as dist
 from ruamel import yaml
-from torch.nn.parallel import DistributedDataParallel as DDP
 
 import wandb
 from modules_new import envs, utils
@@ -60,26 +63,49 @@ def main():
         'more_gpu': args.more_gpu
     }
 
-    # W&B setup
-    wandb.init(project=args.project, mode=args.mode, notes=args.notes, config=config)
-    config = wandb.config
-
     # Device, autocast, compile
-    if config.more_gpu:
+    if config['more_gpu']:
+        print("Multi GPU job selected...")
         l_rank = utils.setup_distributed()
+        print(f"Rank: {l_rank}")
+        world_size = dist.get_world_size()
+        print(f"world size: {world_size}")
         device = torch.device(f"cuda:{l_rank}")
-        compile_ = lambda mod: torch.compile(DDP(mod, device_ids=[l_rank]), dynamic=True, disable=not config.compile)
+        print(f"Device: {device}")
+        compile_ = partial(utils.compile_ddp, disable=not config['compile'], l_rank=l_rank)
         
         # Make sure to reduce size of each buffer per parallel processing group.
-        config.trainer.env_steps = config.trainer.env_steps // len(device)
+        config['trainer']['env_steps'] = config['trainer']['env_steps'] // world_size
     else:
         device = torch.device(args.device)
-        compile_ = lambda mod: torch.compile(mod, dynamic=True, disable=not config.compile)
-    autocast = lambda: torch.autocast(device_type=device.type, enabled=config.amp)
+        compile_ = lambda mod: torch.compile(mod, dynamic=True, disable=not config['compile'])
+    autocast = lambda: torch.autocast(device_type=device.type, enabled=config['amp'])
+
+    # W&B setup
+    if config['more_gpu']:
+        exp_name = randomname.get_name()
+        run_id = os.environ.get("TORCH_RUN_ID", "unique_job_id")
+        wandb.init(
+            project=args.project, 
+            mode=args.mode, 
+            notes=args.notes, 
+            config=config,
+            group=f"{exp_name}-{run_id}",
+            name=f"gpu-{os.environ.get('RANK', '0')}"
+        )
+    else:
+        wandb.init(
+            project=args.project, 
+            mode=args.mode, 
+            notes=args.notes, 
+            config=config
+        )
+    config = wandb.config
 
     # Env, policy, agent, wm
     seed = (config.seed + 42) * 27
-    rng = utils.seed_all(seed)
+    rng = utils.seed_all(seed, local_rank=l_rank if l_rank else 0)
+
     env = envs.atari_env(config.game, make=True, **config.env)
 
     y_dim = config.wm['y_dim']
