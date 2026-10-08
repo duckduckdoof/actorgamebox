@@ -1,17 +1,18 @@
-action_stack: 1
+action_stack: 4
 
-env: &game_env
+env:
   full_action_space: false
   max_frames: 20000
-  episodic_life: False
-  patch_size: 64
-  mov_scale: 16.0
-  max_sacchades: 10
-  sacchade_penalty: -0.1
+  noop_max: 30
+  resolution: 64
+  grayscale: false
+  frame_skip: 4
+  frame_stack: 4
+  episodic_life: true
 
 wm:
-  y_dim: 512
-  z_dim: 2048
+  y_dim: 256
+  z_dim: 1024
 
   encoder:
     channels: 64-128-256-64
@@ -25,7 +26,7 @@ wm:
     out_norm: true
 
   projector:
-    dims: 2048-2048
+    dims: 1024-1024
     norm: layer
     act: silu
     init: truncated_normal
@@ -34,7 +35,7 @@ wm:
     objective: l2
 
   predictor:
-    dims: 2048-2048
+    dims: 1024-1024
     norm: layer
     act: silu
     init: truncated_normal
@@ -43,7 +44,7 @@ wm:
     objective: l2
 
   trans_predictor:
-    dims: 1024-1024-1024-1024-1024
+    dims: 512-512-512-512-512
     norm: layer
     act: silu
     init: truncated_normal
@@ -52,7 +53,7 @@ wm:
     objective: l2
 
   rew_predictor:
-    dims: 1024-1024
+    dims: 512-512
     norm: layer
     act: silu
     init: truncated_normal
@@ -65,7 +66,7 @@ wm:
     high: 15
 
   term_predictor:
-    dims: 1024-1024
+    dims: 512-512
     norm: layer
     act: silu
     init: truncated_normal
@@ -106,16 +107,17 @@ trainer:
   init_steps: 5000
   env_eps: 0.01
   env_temp: 1.0
-  wm_every: 2
-  agent_every: 2
+  wm_every: 5
+  agent_every: 5
   log_every: 100
   eval_every: 2500
 
   wm_trainer:
-    batch_size: 1024
+    batch_size: 128
 
     augmentation:
-      - {}
+      - { type: random_shift, shift: 3 }
+      - { type: random_intensity, scale: 0.05 }
 
     repr_optim:
       type: adamw
@@ -160,13 +162,19 @@ trainer:
         clip: 1000.0
 
   agent_trainer:
-    batch_size: 3072
+    batch_size: 256
     horizon: 10
 
     eval_env:
-      <<: *game_env
-
-    eval_num_parallel: 20
+      full_action_space: false
+      max_frames: 108000
+      noop_max: 1
+      resolution: 64
+      grayscale: false
+      frame_skip: 4
+      frame_stack: 4
+      episodic_life: false
+    eval_num_parallel: 10
     eval_temperature: 0.5
     eval_epsilon: 0.0
     eval_episodes: 20

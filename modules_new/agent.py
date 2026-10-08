@@ -18,7 +18,8 @@ import numpy as np
 import torch
 from torch import nn
 
-from modules_new import envs, utils
+from modules import environment as e
+from modules_new import utils
 
 
 # CLASSES
@@ -103,7 +104,7 @@ class AgentTrainer:
         self.autocast = autocast
 
         if eval_mode in ('all', 'final'):
-            eval_env_id, eval_env_wrappers, eval_env_kwargs = envs.atari_env(game, make=False, **eval_env)
+            eval_env_id, eval_env_wrappers, eval_env_kwargs = e.eye_env(game, make=False, **eval_env)
             self.eval_collector = utils.EpisodeCollector(eval_env_id, eval_env_wrappers, eval_env_kwargs, eval_num_parallel)
 
         self.policy_trainer = agent.policy.create_trainer(
@@ -202,4 +203,5 @@ class AgentTrainer:
         return metrics
 
     def close(self):
-        self.eval_collector.close()
+        if self.eval_collector:
+            self.eval_collector.close()

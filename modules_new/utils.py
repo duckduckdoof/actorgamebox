@@ -19,11 +19,14 @@ from dataclasses import dataclass
 from functools import singledispatch
 
 import gymnasium as gym
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch._dynamo
 import torch.distributed as dist
 import torch.nn.functional as F
+from IPython.display import HTML
+from matplotlib.animation import FuncAnimation
 
 from configs.constants import LUMA_VALS
 
@@ -172,6 +175,22 @@ def two_hot(tensor, bins):
         torch.nn.functional.one_hot(above.squeeze(-1), num_bins) * weight_above
 
 # Utilities for visualization from data.
+
+def show_frames(rgb_array, interval):
+    """ Given an array of RGB data, return animation of those frames. """
+    rgb_array = np.stack(rgb_array)
+    fig, ax = plt.subplots()
+    img = ax.imshow(rgb_array[0], cmap='gray' if rgb_array.ndim == 3 else None)
+    plt.axis('off')
+
+    def update(frame):
+        img.set_data(frame)
+        return img, 
+
+    ani = FuncAnimation(fig, update, frames=rgb_array, interval=interval, blit=True)
+    display = HTML(ani.to_jshtml)
+    plt.close()
+    return display
 
 def grayscale(x, dim, keepdim=False, lumas=LUMA_VALS):
     """ Convert to grayscale (LUMA) """
