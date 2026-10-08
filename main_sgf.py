@@ -14,6 +14,7 @@ from pathlib import Path
 
 import torch
 from ruamel import yaml
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 import wandb
 from modules_new import envs, utils
@@ -38,6 +39,7 @@ def main():
     parser.add_argument("--amp", default=False, action='store_true', help="Use automatic mixed precision training")
     parser.add_argument("--compile", default=False, action='store_true', help="Whether to use torch.compile")
     parser.add_argument("--save", default=False, action='store_true', help="Save the model after training.")
+    parser.add_argument("--more_gpu", default=False, action='store_true', help="Enable distributed parallel gpu use.")
     args = parser.parse_args()
 
     # Load from config file
@@ -55,6 +57,7 @@ def main():
         'amp': args.amp,
         'compile': args.compile,
         'save': args.save,
+        'more_gpu': args.more_gpu
     }
 
     # W&B setup
@@ -62,9 +65,17 @@ def main():
     config = wandb.config
 
     # Device, autocast, compile
-    device = torch.device(args.device)
+    if config.more_gpu:
+        l_rank = utils.setup_distributed()
+        device = torch.device(f"cuda:{l_rank}")
+        compile_ = lambda mod: torch.compile(DDP(mod, device_ids=[l_rank]), dynamic=True, disable=not config.compile)
+        
+        # Make sure to reduce size of each buffer per parallel processing group.
+        config.trainer.env_steps = config.trainer.env_steps // len(device)
+    else:
+        device = torch.device(args.device)
+        compile_ = lambda mod: torch.compile(mod, dynamic=True, disable=not config.compile)
     autocast = lambda: torch.autocast(device_type=device.type, enabled=config.amp)
-    compile_ = lambda mod: torch.compile(mod, dynamic=True, disable=not config.compile)
 
     # Env, policy, agent, wm
     seed = (config.seed + 42) * 27
@@ -127,6 +138,8 @@ def main():
     # Clean up
     trainer.close()
     wandb.finish()
+    if config.more_gpu:
+        utils.cleanup_devices()
 
 if __name__ == "__main__":
     main()

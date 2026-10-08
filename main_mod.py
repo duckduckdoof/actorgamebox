@@ -150,7 +150,8 @@ def main(game=g.ROMS[15]):
     # Clean up
     trainer.close()
     wandb.finish()
-    utils.cleanup_devices()
+    if config.more_gpu:
+        utils.cleanup_devices()
 
 if __name__ == "__main__":
     main()
