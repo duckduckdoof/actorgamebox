@@ -1,4 +1,4 @@
-action_stack: 4
+action_stack: 2
 
 env:
   full_action_space: false
@@ -6,8 +6,8 @@ env:
   noop_max: 30
   resolution: 64
   grayscale: false
-  frame_skip: 4
-  frame_stack: 4
+  frame_skip: 2
+  frame_stack: 2
   episodic_life: true
 
 wm:
@@ -15,7 +15,7 @@ wm:
   z_dim: 1024
 
   encoder:
-    channels: 64-128-256-64
+    channels: 32-64-128-32
     kernels: 4-4-4-3
     strides: 2-2-2-1
     paddings: 1-1-1-1

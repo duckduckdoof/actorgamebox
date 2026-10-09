@@ -85,7 +85,7 @@ def main(game=g.ROMS[15]):
 
     # W&B setup
     if config['more_gpu']:
-        run_id = os.environ.get("TORCH_RUN_ID", "unique_job_id")
+        run_id = os.environ.get("TORCHELASTIC_RUN_ID")
         wandb.init(
             project=args.project, 
             mode=args.mode, 
