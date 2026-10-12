@@ -59,6 +59,7 @@ def eye_env(
         game_name: str,
         max_frames: int = 108000, 
         full_action_space: bool = False, 
+        frame_skip: int = 1,
         frame_stack: int = 1,
         episodic_life: bool = True,
 
@@ -81,6 +82,10 @@ def eye_env(
         partial(
             gym.wrappers.TimeLimit,
             max_episode_steps=max_frames
+        ),
+        partial(
+            gym.wrappers.RepeatAction,
+            num_repeats=frame_skip
         ),
         partial(
             EyePatchWrapper,
