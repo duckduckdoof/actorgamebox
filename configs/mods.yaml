@@ -2,12 +2,12 @@ action_stack: 1
 
 env: &game_env
   full_action_space: false
-  max_frames: 50000
+  max_frames: 108000
   episodic_life: False
   patch_size: 64
   mov_scale: 16.0
-  max_sacchades: 10
-  sacchade_penalty: -0.1
+  max_sacchades: 5
+  sacchade_penalty: 0.0
 
 wm:
   y_dim: 512
@@ -102,20 +102,19 @@ policy:
     high: 20
 
 trainer:
-  env_steps: 200000
-  init_steps: 10000
+  env_steps: 100000
+  init_steps: 8000
   env_eps: 0.01
   env_temp: 1.0
-  wm_every: 2
-  agent_every: 2
+  wm_every: 5
+  agent_every: 5
   log_every: 100
   eval_every: 2500
 
   wm_trainer:
     batch_size: 128
 
-    augmentation:
-      - { type: random_intensity, scale: 0.01 }
+    augmentation: null
 
     repr_optim:
       type: adamw

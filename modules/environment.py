@@ -14,7 +14,7 @@ Create and run atari-based environment.
 import os
 os.environ['SDL_VIDEODRIVER'] = "x11"
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import partial
 
 import ale_py
@@ -339,7 +339,7 @@ class Environment:
         self.env.action_space.seed(seed)
 
         # Recording wrapper
-        today = datetime.now(tz=timezone.utc).strftime(DEFAULT_DATETIME)
+        today = datetime.now(tz=UTC).strftime(DEFAULT_DATETIME)
         if display_mode == "record":
             self.env = gym.wrappers.RecordVideo(
                 self.env,
