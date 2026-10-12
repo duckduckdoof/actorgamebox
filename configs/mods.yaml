@@ -2,7 +2,7 @@ action_stack: 1
 
 env: &game_env
   full_action_space: false
-  max_frames: 20000
+  max_frames: 50000
   episodic_life: False
   patch_size: 64
   mov_scale: 16.0
@@ -115,7 +115,7 @@ trainer:
     batch_size: 1024
 
     augmentation:
-      - {}
+      - { type: random_intensity, scale: 0.01 }
 
     repr_optim:
       type: adamw

@@ -65,6 +65,7 @@ def main(game=g.ROMS[15]):
     }
 
     # Device, autocast, compile
+    l_rank = None
     if config['more_gpu']:
         print("Multi GPU job selected...")
         l_rank = utils.setup_distributed()

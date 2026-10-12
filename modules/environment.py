@@ -287,7 +287,9 @@ class EyePatchWrapper(gym.Wrapper):
         """ Eye sacchade movement. """
         self.eye_itrs += 1
         if self.eye_itrs >= self.max_sacchades:
-            print("We've looked around too much and spent too much time. Penalize.")
+            # print("We've looked around too much and spent too much time. Penalize.")
+            # If we've maxed sacchades, then choose a NOOP game action to advance the game.
+            return self._game_act(0)
 
         di = self.eye_action_to_displacement[action]
         self._update_patch_pos(di)
