@@ -1,13 +1,13 @@
-action_stack: 2
+action_stack: 4
 
-env:
+env: &game_env
   full_action_space: false
   max_frames: 20000
   noop_max: 30
   resolution: 64
   grayscale: false
-  frame_skip: 2
-  frame_stack: 2
+  frame_skip: 4
+  frame_stack: 4
   episodic_life: true
 
 wm:
@@ -166,13 +166,7 @@ trainer:
     horizon: 10
 
     eval_env:
-      full_action_space: false
-      max_frames: 108000
-      noop_max: 1
-      resolution: 64
-      grayscale: false
-      frame_skip: 4
-      frame_stack: 4
+      <<: *game_env
       episodic_life: false
     eval_num_parallel: 10
     eval_temperature: 0.5

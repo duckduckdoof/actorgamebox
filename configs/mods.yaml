@@ -3,7 +3,8 @@ action_stack: 1
 env: &game_env
   full_action_space: false
   max_frames: 108000
-  episodic_life: False
+  episodic_life: true
+  frame_stack: 1
   patch_size: 64
   mov_scale: 16.0
   max_sacchades: 5
@@ -164,6 +165,7 @@ trainer:
 
     eval_env:
       <<: *game_env
+      episodic_life: false
 
     eval_num_parallel: 20
     eval_temperature: 0.5

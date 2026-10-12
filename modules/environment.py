@@ -58,7 +58,8 @@ def eye_env(
         # Gym game args
         game_name: str,
         max_frames: int = 108000, 
-        full_action_space=False, 
+        full_action_space: bool = False, 
+        frame_stack: int = 1,
         episodic_life: bool = True,
 
         # Eye env args
@@ -81,7 +82,6 @@ def eye_env(
             gym.wrappers.TimeLimit,
             max_episode_steps=max_frames
         ),
-        EpisodicLifeWrapper if episodic_life else None,
         partial(
             EyePatchWrapper,
             patch_size=patch_size,
@@ -89,7 +89,12 @@ def eye_env(
             mov_scale=mov_scale,
             max_sacchades=max_sacchades,
             sacchade_penalty=sacchade_penalty
-        )
+        ),
+        partial(
+            gym.wrappers.FrameStackObservation,
+            stack_size=frame_stack
+        ),
+        EpisodicLifeWrapper if episodic_life else None,
     ]
     wrappers = [w for w in wrappers if w]
     kwargs = {'full_action_space': full_action_space}
@@ -192,7 +197,7 @@ class EyePatchWrapper(gym.Wrapper):
             raise TypeError("patch_size must be either int or tuple[int, int].")
 
         # The last dim of frame is color channels (RGB)
-        self.obs_shape = (1, *self.patch_size, 3)
+        self.obs_shape = (*self.patch_size, 3)
         self.observation_space = gym.spaces.Box(0, 255, self.obs_shape, dtype=np.uint8)
 
         if isinstance(patch_pos, tuple):
@@ -279,7 +284,6 @@ class EyePatchWrapper(gym.Wrapper):
             raise ValueError(f"Initial position {self.patch_pos} must be within bounds: {self._get_bounds()}")
 
         p = self._get_patch()
-        p = np.expand_dims(p, axis=0)
         info = self._get_info()
         return p, info
 
@@ -312,7 +316,6 @@ class EyePatchWrapper(gym.Wrapper):
         action = action if action < eas else action - eas
         
         obs, rew, term, trunc = act(action)
-        obs = np.expand_dims(obs, axis=0)
         info = self._get_info()
 
         return obs, rew, term, trunc, info
