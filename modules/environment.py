@@ -266,7 +266,7 @@ class EyePatchWrapper(gym.Wrapper):
             'game_itrs': self.game_itrs
         }
 
-    def reset(self, seed: int | None = None):
+    def reset(self, seed: int | None = None, options = None):
         """ Starts a new episode. """
         super().reset(seed=seed)
 
