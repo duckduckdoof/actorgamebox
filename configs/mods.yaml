@@ -102,8 +102,8 @@ policy:
     high: 20
 
 trainer:
-  env_steps: 100000
-  init_steps: 5000
+  env_steps: 200000
+  init_steps: 10000
   env_eps: 0.01
   env_temp: 1.0
   wm_every: 2
@@ -112,7 +112,7 @@ trainer:
   eval_every: 2500
 
   wm_trainer:
-    batch_size: 1024
+    batch_size: 128
 
     augmentation:
       - { type: random_intensity, scale: 0.01 }
@@ -160,7 +160,7 @@ trainer:
         clip: 1000.0
 
   agent_trainer:
-    batch_size: 3072
+    batch_size: 128
     horizon: 10
 
     eval_env:
