@@ -235,7 +235,7 @@ def transpose_cnn(in_dim, out_dim, in_res, channels, kernels, strides, paddings,
     if len(kernels) != num_layers or len(strides) != num_layers or len(paddings) != num_layers:
         raise ValueError("Number of channels, strides, kernels, and paddings must be equal.")
 
-    linear_mod = nn.Linear(in_dim, channels[0] * in_res, * in_res, bias=True, device=device)
+    linear_mod = nn.Linear(in_dim, channels[0] * in_res * in_res, bias=True, device=device)
     unflatten_mod = nn.Unflatten(1, (channels[0], in_res, in_res))
     modules = [linear_mod, unflatten_mod]
 
