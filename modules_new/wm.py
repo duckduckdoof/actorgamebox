@@ -349,6 +349,6 @@ class WorldModelTrainer:
             vid.append(torch.zeros_like(vid[-1]))
             vid = torch.stack(vid, 0)
             vid = (vid * 255.).byte().cpu().numpy()
-            metrics['dream'] = wandb.Video(vid, fps=10)
+            metrics['dream'] = wandb.Video(vid, fps=10, format="mp4")
 
         return metrics
