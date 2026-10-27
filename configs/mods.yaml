@@ -10,6 +10,7 @@ env: &game_env
   mov_scale: 16.0
   max_sacchades: 5
   sacchade_penalty: 0.0
+  multi_patch: true
 
 wm:
   y_dim: 512

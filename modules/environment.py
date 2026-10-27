@@ -70,6 +70,7 @@ def eye_env(
         mov_scale: float = 1.0,
         max_sacchades: int = 10,
         sacchade_penalty: float = -0.1,
+        multi_patch: bool = True,
 
         # Make the game or set it up for later
         make=True
@@ -94,7 +95,8 @@ def eye_env(
             patch_pos=patch_pos,
             mov_scale=mov_scale,
             max_sacchades=max_sacchades,
-            sacchade_penalty=sacchade_penalty
+            sacchade_penalty=sacchade_penalty,
+            multi_patch=multi_patch
         ),
         partial(
             gym.wrappers.FrameStackObservation,
@@ -189,7 +191,8 @@ class EyePatchWrapper(gym.Wrapper):
             patch_pos: tuple[int, int] | np.ndarray = (0,0),
             mov_scale: float = 1.0,
             max_sacchades: int = 10,
-            sacchade_penalty: float = -0.1
+            sacchade_penalty: float = -0.1,
+            multi_patch: bool = True
         ):
         super().__init__(env)
         self.game_env = env
@@ -203,7 +206,12 @@ class EyePatchWrapper(gym.Wrapper):
             raise TypeError("patch_size must be either int or tuple[int, int].")
 
         # The last dim of frame is color channels (RGB)
-        self.obs_shape = (*self.patch_size, 3)
+        if multi_patch:
+            self.obs_shape = (*self.patch_size, 3*3)
+            self.multi_patch = True
+        else:
+            self.obs_shape = (*self.patch_size, 3)
+            self.multi_patch = False
         self.observation_space = gym.spaces.Box(0, 255, self.obs_shape, dtype=np.uint8)
 
         if isinstance(patch_pos, tuple):
@@ -251,12 +259,20 @@ class EyePatchWrapper(gym.Wrapper):
         tl = np.array([0,0])
         return np.all((pos >= tl) & (pos < br))
 
+    def _in_frame(self, pos: np.ndarray):
+        br = np.array([self.frame.shape[0], self.frame.shape[1]])
+        tl = np.array([0,0])
+        return np.all((pos >= tl) & (pos < br))
+
     def _rand_patch_pos(self):
         """ Returns a random position within the frame (accounting for patch size) """
         h, w = self._get_bounds()
         return self.np_random.integers((0, 0), (h, w))
 
     def _get_patch(self):
+        return self._get_multi_patch() if self.multi_patch else self._get_single_patch()
+
+    def _get_single_patch(self):
         """ Given the location of the top-left position of the patch, return the patch. """
         y, x = self.patch_pos
         h, w = self.patch_size[0], self.patch_size[1]
@@ -271,22 +287,35 @@ class EyePatchWrapper(gym.Wrapper):
             - the third patch is a larger (2.0x) field, downscaled to fit the patch size
         """
         # Get first patch, coords, size
-        p1 = self._get_patch()
+        p1 = self._get_single_patch()
         y, x = self.patch_pos
         h, w = self.patch_size[0], self.patch_size[1]
 
+        # Return (y,x), (h,w) of new larger patch derived from original patch.
+        def get_larger_patch(y, x, h, w, size):
+            h2, w2 = int(size * h), int(size * w)
+            dh2, dw2 = 0.5*(h2 - h), 0.5*(w2 - w)
+            y2, x2 = int(y - dh2), int(x - dw2)
+            return y2, x2, h2, w2
+
+        # Fill new patch with original frame, or 0 if out of bounds.
+        def fill_larger_patch(y, x, h, w):
+            coords = np.mgrid[y:y+h, x:x+w].reshape(2, -1).T
+            coords = coords.reshape(h, w, 2)
+            p2 = np.zeros((h, w, 3), np.uint8)
+            for j, i in np.ndindex(coords.shape[:2]):
+                if self._in_frame(coords[j, i]):
+                    p2[j, i] = self.frame[tuple(coords[j, i])]
+            return p2
+
         # Get larger (1.5x) patch from the first, then resize to original patch size.
-        h2, w2 = int(1.5 * h), int(1.5 * w)
-        dh2, dw2 = 0.5*(h2 - h), 0.5*(w2 - w)
-        y2, x2 = y - dh2, x - dw2
-        p2 = self.frame[y2:y2+h2, x2:x2+w2, :]
+        y2, x2, h2, w2 = get_larger_patch(y, x, h, w, 1.5)
+        p2 = fill_larger_patch(y2, x2, h2, w2)
         p2 = cv2.resize(p2, (h, w), interpolation=cv2.INTER_AREA)
 
         # Get final (2.0x) patch from the first, then resize to original patch size.
-        h3, w3 = int(2.0 * h), int(2.0 * w)
-        dh3, dw3 = 0.5*(h3 - h), 0.5*(w3 - w)
-        y3, x3 = y - dh3, x - dw3
-        p3 = self.frame[y3:y3+h3, x3:x3+w3, :]
+        y3, x3, h3, w3 = get_larger_patch(y, x, h, w, 2.0)
+        p3 = fill_larger_patch(y3, x3, h3, w3)
         p3 = cv2.resize(p3, (h, w), interpolation=cv2.INTER_AREA)
 
         # Stack multiple patches into RGB-axis of (H, W, RGB) without new dim
