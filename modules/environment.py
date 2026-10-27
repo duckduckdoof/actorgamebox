@@ -71,6 +71,7 @@ def eye_env(
         max_sacchades: int = 10,
         sacchade_penalty: float = -0.1,
         multi_patch: bool = True,
+        coord_conv: bool = True,
 
         # Make the game or set it up for later
         make=True
@@ -98,6 +99,7 @@ def eye_env(
             sacchade_penalty=sacchade_penalty,
             multi_patch=multi_patch
         ),
+        CoordEyePatchWrapper if coord_conv else None,
         partial(
             gym.wrappers.FrameStackObservation,
             stack_size=frame_stack
@@ -192,7 +194,7 @@ class EyePatchWrapper(gym.Wrapper):
             mov_scale: float = 1.0,
             max_sacchades: int = 10,
             sacchade_penalty: float = -0.1,
-            multi_patch: bool = True
+            multi_patch: bool = False
         ):
         super().__init__(env)
         self.game_env = env
@@ -403,11 +405,15 @@ class CoordEyePatchWrapper(EyePatchWrapper):
         super().__init__(env)
         self.env = env
 
+        # We are adding two channels with positional information, so edit the observation shape
+        self.obs_shape = (*self.obs_shape[:-1], self.obs_shape[-1] + 2)
+        self.observation_space = gym.spaces.Box(0, 255, self.obs_shape, dtype=np.uint8)
+
     def _get_coord_channels(self):
         """ Places Coord channels (y,x) into the channels of the image payload. """
         h, w = self.patch_size[0], self.patch_size[1]
         dy, dx = self.patch_pos[0], self.patch_pos[1]
-        space = np.linspace(-1, 1, h)
+        space = np.linspace(0, 1, h)
         yspace = space + dy
         xspace = space + dx
 
