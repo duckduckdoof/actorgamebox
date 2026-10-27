@@ -275,14 +275,14 @@ class EyePatchWrapper(gym.Wrapper):
         y, x = self.patch_pos
         h, w = self.patch_size[0], self.patch_size[1]
 
-        # Get larger (1.5x) patch from the first
+        # Get larger (1.5x) patch from the first, then resize to original patch size.
         h2, w2 = int(1.5 * h), int(1.5 * w)
         dh2, dw2 = 0.5*(h2 - h), 0.5*(w2 - w)
         y2, x2 = y - dh2, x - dw2
         p2 = self.frame[y2:y2+h2, x2:x2+w2, :]
         p2 = cv2.resize(p2, (h, w), interpolation=cv2.INTER_AREA)
 
-        # Get final (2.0x) patch from the first
+        # Get final (2.0x) patch from the first, then resize to original patch size.
         h3, w3 = int(2.0 * h), int(2.0 * w)
         dh3, dw3 = 0.5*(h3 - h), 0.5*(w3 - w)
         y3, x3 = y - dh3, x - dw3
