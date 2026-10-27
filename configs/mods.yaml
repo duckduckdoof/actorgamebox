@@ -1,14 +1,14 @@
-action_stack: 1
+action_stack: 4
 
 env: &game_env
   full_action_space: false
   max_frames: 108000
   episodic_life: true
-  frame_skip: 1
-  frame_stack: 1
+  frame_skip: 4
+  frame_stack: 4
   patch_size: 64
-  mov_scale: 16.0
-  max_sacchades: 5
+  mov_scale: 20.0
+  max_sacchades: 6
   sacchade_penalty: 0.0
   multi_patch: true
 
@@ -115,7 +115,7 @@ trainer:
   eval_every: 2500
 
   wm_trainer:
-    batch_size: 128
+    batch_size: 1024
 
     augmentation: null
 
@@ -162,7 +162,7 @@ trainer:
         clip: 1000.0
 
   agent_trainer:
-    batch_size: 128
+    batch_size: 3072
     horizon: 10
 
     eval_env:
