@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 from functools import partial
 
 import ale_py
+import cv2
 import gymnasium as gym
 import numpy as np
 
@@ -260,6 +261,36 @@ class EyePatchWrapper(gym.Wrapper):
         y, x = self.patch_pos
         h, w = self.patch_size[0], self.patch_size[1]
         return self.frame[y:y+h, x:x+w, :]
+
+    def _get_multi_patch(self):
+        """ 
+        Given the location of the top-left position of the patch, return
+        a 3-channel stack of patches, where:
+            - the first patch is a 1:1 copy of the perceptual area
+            - the second patch is a larger (1.5x) field, downscaled to fit the patch size
+            - the third patch is a larger (2.0x) field, downscaled to fit the patch size
+        """
+        # Get first patch, coords, size
+        p1 = self._get_patch()
+        y, x = self.patch_pos
+        h, w = self.patch_size[0], self.patch_size[1]
+
+        # Get larger (1.5x) patch from the first
+        h2, w2 = int(1.5 * h), int(1.5 * w)
+        dh2, dw2 = 0.5*(h2 - h), 0.5*(w2 - w)
+        y2, x2 = y - dh2, x - dw2
+        p2 = self.frame[y2:y2+h2, x2:x2+w2, :]
+        p2 = cv2.resize(p2, (h, w), interpolation=cv2.INTER_AREA)
+
+        # Get final (2.0x) patch from the first
+        h3, w3 = int(2.0 * h), int(2.0 * w)
+        dh3, dw3 = 0.5*(h3 - h), 0.5*(w3 - w)
+        y3, x3 = y - dh3, x - dw3
+        p3 = self.frame[y3:y3+h3, x3:x3+w3, :]
+        p3 = cv2.resize(p3, (h, w), interpolation=cv2.INTER_AREA)
+
+        # Stack multiple patches into RGB-axis of (H, W, RGB) without new dim
+        return np.concatenate([p1, p2, p3], axis=2)
 
     def _update_patch_pos(self, disp: np.ndarray):
         """ Given vector displacement of patch position, update location """
