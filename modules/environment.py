@@ -385,6 +385,50 @@ class EyePatchWrapper(gym.Wrapper):
 
         return obs, rew, term, trunc, info
 
+class CoordEyePatchWrapper(EyePatchWrapper):
+    """
+    CoordConv ref: https://arxiv.org/abs/1807.03247
+
+    Uses hard-coded YX channels appended in the channel dimension of images to
+    embed positional information about the pixels, which the model can take
+    advantage of.
+
+    We will use this implementation, with the added feature of translating the entire
+    YX channels by an amount determined by the eye position of the sacchade on the screen frame.
+
+    Requires that an EyePatchWrapper is used before this one.
+    """
+
+    def __init__(self, env: gym.Env):
+        super().__init__(env)
+        self.env = env
+
+    def _get_coord_channels(self):
+        """ Places Coord channels (y,x) into the channels of the image payload. """
+        h, w = self.patch_size[0], self.patch_size[1]
+        dy, dx = self.patch_pos[0], self.patch_pos[1]
+        space = np.linspace(-1, 1, h)
+        yspace = space + dy
+        xspace = space + dx
+
+        yy_channel = np.tile(yspace[:, np.newaxis], (1, h))
+        xx_channel = np.tile(xspace[np.newaxis, :], (w, 1))
+
+        return np.stack((yy_channel, xx_channel), axis=-1)
+
+    def reset(self, seed: int | None = None, options = None):
+        frame, info = self.env.reset(seed, options)
+        coords = self._get_coord_channels()
+        frame = np.concatenate((frame, coords), axis=2)
+        return frame, info
+
+    def step(self, action):
+        obs, rew, term, trunc, info = self.env.step(action)
+        coords = self._get_coord_channels()
+        obs = np.concatenate((obs, coords), axis=2)
+        return obs, rew, term, trunc, info
+
+# TODO: probably get rid of this old class.
 class Environment:
     """
     Wrapper class for gym Atari environment + configs.
