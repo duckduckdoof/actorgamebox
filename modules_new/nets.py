@@ -325,6 +325,27 @@ class RandomShift(nn.Module):
         out = torch.stack(out, 0)
         return out
 
+class CoordsConv(nn.Module):
+    """
+    Generic implementation of the CoordConv module.
+    src: https://arxiv.org/abs/1807.03247
+
+    Unlike with EyePatchWrapper, this simply adds YX channels without
+    shifting by the patch position (since we can't access it from here).
+    """
+
+    def forward(self, x):
+        b, _, h, w = x.shape
+
+        yy_channel = torch.linspace(-1, 1, h, device=x.device, dtype=x.dtype).repeat(1, 1, w, 1).transpose(2, 3)
+        xx_channel = torch.linspace(-1, 1, w, device=x.device, dtype=x.dtype).repeat(1, 1, h, 1)
+        
+        yy_channel = yy_channel.expand(b, -1, -1, -1)
+        xx_channel = xx_channel.expand(b, -1, -1, -1)
+
+        # Make sure to concatenate the channels on the channel dim
+        return torch.cat([x, yy_channel, xx_channel], dim=1)
+
 class Sign(nn.Module):
 
     def forward(self, x):
@@ -370,7 +391,8 @@ _inits = {
 _transforms = {
     'none': lambda: None,
     'random_shift': lambda **kwargs: RandomShift(**kwargs),
-    'random_intensity': lambda **kwargs: RandomIntensity(**kwargs)
+    'random_intensity': lambda **kwargs: RandomIntensity(**kwargs),
+    'coord_conv': lambda: CoordsConv()
 }
 
 class ScalarMLP(nn.Module):
