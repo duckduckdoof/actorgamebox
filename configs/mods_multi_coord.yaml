@@ -2,7 +2,7 @@ action_stack: 4
 
 env: &game_env
   full_action_space: false
-  max_frames: 108000
+  max_frames: 208000
   episodic_life: true
   frame_skip: 4
   frame_stack: 4
@@ -106,8 +106,8 @@ policy:
     high: 20
 
 trainer:
-  env_steps: 100000
-  init_steps: 8000
+  env_steps: 140000
+  init_steps: 10000
   env_eps: 0.01
   env_temp: 1.0
   wm_every: 5
