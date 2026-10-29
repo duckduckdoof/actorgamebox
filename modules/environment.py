@@ -63,6 +63,7 @@ def eye_env(
         frame_skip: int = 1,
         frame_stack: int = 1,
         episodic_life: bool = True,
+        grayscale: bool = False,
 
         # Eye env args
         patch_size: int | tuple[int, int] = 30,
@@ -90,6 +91,10 @@ def eye_env(
             gym.wrappers.RepeatAction,
             num_repeats=frame_skip
         ),
+        partial(
+            gym.wrappers.GrayscaleObservation,
+            keep_dim=True
+        ) if grayscale else None,
         partial(
             EyePatchWrapper,
             patch_size=patch_size,
@@ -209,10 +214,10 @@ class EyePatchWrapper(gym.Wrapper):
 
         # The last dim of frame is color channels (RGB)
         if multi_patch:
-            self.obs_shape = (*self.patch_size, 3*3)
+            self.obs_shape = (*self.patch_size, self.game_env.observation_space.shape[-1] * 3)
             self.multi_patch = True
         else:
-            self.obs_shape = (*self.patch_size, 3)
+            self.obs_shape = (*self.patch_size, self.game_env.observation_space.shape[-1])
             self.multi_patch = False
         self.observation_space = gym.spaces.Box(0, 255, self.obs_shape, dtype=np.uint8)
 
@@ -387,7 +392,7 @@ class EyePatchWrapper(gym.Wrapper):
 
         return obs, rew, term, trunc, info
 
-class CoordEyePatchWrapper(EyePatchWrapper):
+class CoordEyePatchWrapper(gym.Wrapper):
     """
     CoordConv ref: https://arxiv.org/abs/1807.03247
 
@@ -401,24 +406,24 @@ class CoordEyePatchWrapper(EyePatchWrapper):
     Requires that an EyePatchWrapper is used before this one.
     """
 
-    def __init__(self, env: gym.Env):
+    def __init__(self, env: EyePatchWrapper):
         super().__init__(env)
         self.env = env
 
         # We are adding two channels with positional information, so edit the observation shape
-        self.obs_shape = (*self.obs_shape[:-1], self.obs_shape[-1] + 2)
+        self.obs_shape = (*self.env.obs_shape[:-1], self.env.obs_shape[-1] + 2)
         self.observation_space = gym.spaces.Box(0, 255, self.obs_shape, dtype=np.uint8)
+        self.action_space = self.env.action_space
 
     def _get_coord_channels(self):
         """ Places Coord channels (y,x) into the channels of the image payload. """
-        h, w = self.patch_size[0], self.patch_size[1]
-        dy, dx = self.patch_pos[0], self.patch_pos[1]
-        space = np.linspace(0, 1, h)
-        yspace = space + dy
-        xspace = space + dx
+        h, w = self.env.patch_size[0], self.env.patch_size[1]
+        dy, dx = self.env.patch_pos[0], self.env.patch_pos[1]
+        yspace = np.arange(0, h) + dy
+        xspace = np.arange(0, w) + dx
 
-        yy_channel = np.tile(yspace[:, np.newaxis], (1, h))
-        xx_channel = np.tile(xspace[np.newaxis, :], (w, 1))
+        yy_channel = np.tile(yspace[:, np.newaxis], (1, h)).astype(np.uint8)
+        xx_channel = np.tile(xspace[np.newaxis, :], (w, 1)).astype(np.uint8)
 
         return np.stack((yy_channel, xx_channel), axis=-1)
 

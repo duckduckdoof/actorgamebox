@@ -7,10 +7,10 @@
 # python main_sgf.py --device cuda:0 --game BoxingNoFrameskip-v4 --project sgf_modded --config configs/default.yaml --amp --compile --seed 1 --wm_eval decoder --notes "Boxing, default config"
 
 # Modded: add sacchades
-echo "Testing sacchade module..."
-python main_mod.py --device cuda:0 --game BreakoutNoFrameskip-v4 --project sgf_modded --config configs/mods_default.yaml --amp --compile --seed 1 --notes "Breakout, modded default config"
-python main_mod.py --device cuda:0 --game PongNoFrameskip-v4 --project sgf_modded --config configs/mods_default.yaml --amp --compile --seed 1 --notes "Pong, modded default config"
-python main_mod.py --device cuda:0 --game BoxingNoFrameskip-v4 --project sgf_modded --config configs/mods_default.yaml --amp --compile --seed 1 --notes "Boxing, modded default config"
+# echo "Testing sacchade module..."
+# python main_mod.py --device cuda:0 --game BreakoutNoFrameskip-v4 --project sgf_modded --config configs/mods_default.yaml --amp --compile --seed 1 --notes "Breakout, modded default config"
+# python main_mod.py --device cuda:0 --game PongNoFrameskip-v4 --project sgf_modded --config configs/mods_default.yaml --amp --compile --seed 1 --notes "Pong, modded default config"
+# python main_mod.py --device cuda:0 --game BoxingNoFrameskip-v4 --project sgf_modded --config configs/mods_default.yaml --amp --compile --seed 1 --notes "Boxing, modded default config"
 
 # Modded: sacchade + coordconv positional channels
 echo "Testing sacchade module + coordconv..."

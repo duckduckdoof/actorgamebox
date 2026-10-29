@@ -4,6 +4,7 @@ env: &game_env
   full_action_space: false
   max_frames: 208000
   episodic_life: true
+  grayscale: false
   frame_skip: 4
   frame_stack: 4
   patch_size: 64
