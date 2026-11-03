@@ -9,13 +9,10 @@ Kick-off file for SGF-like training/eval of agent.
 """
 
 # IMPORTS
-import os
 from argparse import ArgumentParser
-from functools import partial
 from pathlib import Path
 
 import torch
-import torch.distributed as dist
 from ruamel import yaml
 
 import wandb
@@ -43,7 +40,6 @@ def main(game=g.ROMS[15]):
     parser.add_argument("--amp", default=False, action='store_true', help="Use automatic mixed precision training")
     parser.add_argument("--compile", default=False, action='store_true', help="Whether to use torch.compile")
     parser.add_argument("--save", default=False, action='store_true', help="Save the model after training.")
-    parser.add_argument("--more_gpu", default=False, action='store_true', help="Enable distributed parallel gpu use.")
     args = parser.parse_args()
 
     # Load from config file
@@ -61,52 +57,25 @@ def main(game=g.ROMS[15]):
         'amp': args.amp,
         'compile': args.compile,
         'save': args.save,
-        'more_gpu': args.more_gpu
     }
 
-    # Device, autocast, compile
-    l_rank = None
-    if config['more_gpu']:
-        print("Multi GPU job selected...")
-        l_rank = utils.setup_distributed()
-        print(f"Rank: {l_rank}")
-        world_size = dist.get_world_size()
-        print(f"world size: {world_size}")
-        device = torch.device(f"cuda:{l_rank}")
-        print(f"Device: {device}")
-        compile_ = partial(utils.compile_ddp, disable=not config['compile'], l_rank=l_rank)
-        # compile_ = lambda mod: torch.compile(DDP(mod, device_ids=[l_rank]), dynamic=True, disable=not config['compile'])
-        
-        # Make sure to reduce size of each buffer per parallel processing group.
-        config['trainer']['env_steps'] = config['trainer']['env_steps'] // world_size
-    else:
-        device = torch.device(args.device)
-        compile_ = lambda mod: torch.compile(mod, dynamic=True, disable=not config['compile'])
-    autocast = lambda: torch.autocast(device_type=device.type, enabled=config['amp'])
-
     # W&B setup
-    if config['more_gpu']:
-        run_id = os.environ.get("TORCHELASTIC_RUN_ID")
-        wandb.init(
-            project=args.project, 
-            mode=args.mode, 
-            notes=args.notes, 
-            config=config,
-            group=f"exp-{run_id}",
-            name=f"gpu-{os.environ.get('RANK', '0')}"
-        )
-    else:
-        wandb.init(
-            project=args.project, 
-            mode=args.mode, 
-            notes=args.notes, 
-            config=config
-        )
+    wandb.init(
+        project=args.project, 
+        mode=args.mode, 
+        notes=args.notes, 
+        config=config
+    )
     config = wandb.config
+
+    # Device, autocast, compile
+    device = torch.device(args.device)
+    autocast = lambda: torch.autocast(device_type=device.type, enabled=config.amp)
+    compile_ = lambda mod: torch.compile(mod, dynamic=True, disable=not config.compile)
 
     # Env, policy, agent, wm
     seed = (config.seed + 42) * 27
-    rng = utils.seed_all(seed, local_rank=l_rank if l_rank else 0)
+    rng = utils.seed_all(seed)
     
     # Create eye-sacchade game wrapper env
     env_selection = e.eye_env
@@ -126,7 +95,13 @@ def main(game=g.ROMS[15]):
         device=device
     )
     g_agent = Agent(g_policy, env.action_space, config.action_stack)
-    wm = WorldModel(env.observation_space, g_agent.stack_act_space, **config.wm, compile_=compile_, device=device)
+    wm = WorldModel(
+        env.observation_space, 
+        g_agent.stack_act_space, 
+        **config.wm, 
+        compile_=compile_, 
+        device=device
+    )
 
     # Trainer
     trainer = Trainer(

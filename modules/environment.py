@@ -214,7 +214,7 @@ class EyePatchWrapper(gym.Wrapper):
 
         # The last dim of frame is color channels (RGB)
         if multi_patch:
-            self.obs_shape = (*self.patch_size, self.game_env.observation_space.shape[-1] * 3)
+            self.obs_shape = (*self.patch_size, self.game_env.observation_space.shape[-1] * 2)
             self.multi_patch = True
         else:
             self.obs_shape = (*self.patch_size, self.game_env.observation_space.shape[-1])
@@ -316,9 +316,9 @@ class EyePatchWrapper(gym.Wrapper):
             return p2
 
         # Get larger (1.5x) patch from the first, then resize to original patch size.
-        y2, x2, h2, w2 = get_larger_patch(y, x, h, w, 1.5)
-        p2 = fill_larger_patch(y2, x2, h2, w2)
-        p2 = cv2.resize(p2, (h, w), interpolation=cv2.INTER_AREA)
+        #y2, x2, h2, w2 = get_larger_patch(y, x, h, w, 1.5)
+        #p2 = fill_larger_patch(y2, x2, h2, w2)
+        #p2 = cv2.resize(p2, (h, w), interpolation=cv2.INTER_AREA)
 
         # Get final (2.0x) patch from the first, then resize to original patch size.
         y3, x3, h3, w3 = get_larger_patch(y, x, h, w, 2.0)
@@ -326,7 +326,7 @@ class EyePatchWrapper(gym.Wrapper):
         p3 = cv2.resize(p3, (h, w), interpolation=cv2.INTER_AREA)
 
         # Stack multiple patches into RGB-axis of (H, W, RGB) without new dim
-        return np.concatenate([p1, p2, p3], axis=2)
+        return np.concatenate([p1, p3], axis=2)
 
     def _update_patch_pos(self, disp: np.ndarray):
         """ Given vector displacement of patch position, update location """

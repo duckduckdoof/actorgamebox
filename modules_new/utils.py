@@ -87,13 +87,11 @@ def rng(seed):
     """ Generator, given seed """
     return np.random.Generator(np.random.PCG64(seed))
 
-def seed_all(seed, local_rank):
+def seed_all(seed):
     """ Seed every rng we have """
-    r_seed = seed + local_rank
-    torch.manual_seed(r_seed)
-    torch.cuda.manual_seed_all(r_seed)
-    np.random.seed(r_seed)
-    return rng(r_seed)
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    return rng(seed)
 
 # Helpful mathematical functions.
 
