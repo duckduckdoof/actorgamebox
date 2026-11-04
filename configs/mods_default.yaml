@@ -2,7 +2,7 @@ action_stack: 4
 
 env: &game_env
   full_action_space: false
-  max_frames: 208000
+  max_frames: 20000
   episodic_life: true
   grayscale: false
   frame_skip: 4
