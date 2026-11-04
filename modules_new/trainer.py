@@ -94,7 +94,7 @@ class Trainer:
         next_o, next_r, next_term, next_trunc, _ = env.step(a.cpu().item())
         cont_o = next_o
         if next_term or next_trunc:
-            cont_o, _ = env.reset()
+            cont_o, _ = env.reset(self.seed)
         next_r, next_term, next_trunc, next_o = self.replay_buffer.step(
             stacked_a, next_o, next_r, next_term, next_trunc, cont_o
         )

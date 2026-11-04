@@ -107,8 +107,8 @@ policy:
     high: 20
 
 trainer:
-  env_steps: 140000
-  init_steps: 10000
+  env_steps: 100000
+  init_steps: 9000
   env_eps: 0.01
   env_temp: 1.0
   wm_every: 5
