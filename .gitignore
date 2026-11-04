@@ -222,3 +222,4 @@ recordings/
 logs/
 tmp/
 wandb/
+nohup.out
