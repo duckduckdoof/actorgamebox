@@ -350,7 +350,7 @@ class EyePatchWrapper(gym.Wrapper):
         self.eye_itrs, self.game_itrs = 0, 0
 
         # Reset the game environment + eye postition on frame.
-        self.frame, _ = self.game_env.reset()
+        self.frame, _ = self.game_env.reset(seed=seed, options=options)
 
         if not self._in_bounds(self.patch_pos):
             raise ValueError(f"Initial position {self.patch_pos} must be within bounds: {self._get_bounds()}")
