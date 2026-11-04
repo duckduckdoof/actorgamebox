@@ -218,6 +218,9 @@ def viz_obs(o):
 
     if c != 1:
         o = grayscale(o, 2, keepdim=False)
+    elif c == 1:
+        # Remove channel dim if already grayscale
+        o = o.squeeze(dim=2)
     if nf >= 4:
         if nf > 4:
             o = o[:, -4:]
