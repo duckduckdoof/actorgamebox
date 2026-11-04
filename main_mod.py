@@ -34,6 +34,7 @@ def main(game=g.ROMS[15]):
     parser.add_argument("--config", type=str, required=True, help="Config file path")
     parser.add_argument("--mode", type=str, nargs='?', help="W&B mode")
     parser.add_argument("--project", type=str, nargs='?', help="W&B project")
+    parser.add_argument("--name", type=str, nargs='?', help="W&B run name")
     parser.add_argument("--notes", type=str, nargs='?', help="W&B notes")
     parser.add_argument("--wm_eval", type=str, default='none', help="World model evaluation: 'none', 'decoder'")
     parser.add_argument("--agent_eval", type=str, default='all', help="Agent model evaluation: 'none', 'all', 'final'")
@@ -62,6 +63,7 @@ def main(game=g.ROMS[15]):
     # W&B setup
     wandb.init(
         project=args.project, 
+        name=args.name,
         mode=args.mode, 
         notes=args.notes, 
         config=config
