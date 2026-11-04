@@ -145,8 +145,6 @@ def main():
     # Clean up
     trainer.close()
     wandb.finish()
-    if config.more_gpu:
-        utils.cleanup_devices()
 
 if __name__ == "__main__":
     main()
