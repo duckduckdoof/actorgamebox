@@ -63,6 +63,7 @@ def main():
     wandb.init(
         project=args.project, 
         name=args.name,
+        group=args.group,
         mode=args.mode, 
         notes=args.notes, 
         config=config
