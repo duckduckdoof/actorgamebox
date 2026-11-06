@@ -27,21 +27,43 @@ from configs.globals import ROM
 # Register ALE before using the Atari ROMs
 gym.register_envs(ale_py)
 
+# For a custom atari environment. Bring-your-own wrappers (BYOW).
+def byow_atari_env(
+        wrappers:           list[partial | gym.Env],
+        game_name:          str  = ROM.Pong_NoFrameskip,
+        full_action_space:  bool = False,
+        make:               bool = True
+    ):
+    env_id = game_name
+    kwargs = {'full_action_space': full_action_space}
+    if make:
+        env = gym.make(env_id, **kwargs)
+        for wrapper in wrappers:
+            env = wrapper(env)
+        return env
+    else:
+        return env_id, wrappers, kwargs
+
+
 def simple_atari_env(
         game_name:          str  = ROM.Pong_NoFrameskip, 
         max_frames:         int  = 108000, 
         full_action_space:  bool = False, 
         episodic_life:      bool = True,
+        grayscale:          bool = False,
         make:               bool = True
     ):
     """ Much simpler atari environment. """
     env_id = game_name
-    env = gym.make(env_id, full_action_space=False)
     wrappers = [
         partial(
             gym.wrappers.TimeLimit,
             max_episode_steps=max_frames
         ),
+        partial(
+            gym.wrappers.GrayscaleObservation,
+            keep_dim=True
+        ) if grayscale else None,
         EpisodicLifeWrapper if episodic_life else None
     ]
     wrappers = [w for w in wrappers if w]
@@ -81,7 +103,6 @@ def eye_env(
     Atari environment, including eye sacchade wrapper for additional actions.
     """
     env_id = game_name
-    env = gym.make(env_id, full_action_space=False)
     wrappers = [
         partial(
             gym.wrappers.TimeLimit,
