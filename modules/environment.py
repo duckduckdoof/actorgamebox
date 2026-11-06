@@ -309,7 +309,7 @@ class EyePatchWrapper(gym.Wrapper):
         def fill_larger_patch(y, x, h, w):
             coords = np.mgrid[y:y+h, x:x+w].reshape(2, -1).T
             coords = coords.reshape(h, w, 2)
-            p2 = np.zeros((h, w, 3), np.uint8)
+            p2 = np.zeros((h, w, self.frame.shape[-1]), np.uint8)
             for j, i in np.ndindex(coords.shape[:2]):
                 if self._in_frame(coords[j, i]):
                     p2[j, i] = self.frame[tuple(coords[j, i])]
@@ -324,6 +324,8 @@ class EyePatchWrapper(gym.Wrapper):
         y3, x3, h3, w3 = get_larger_patch(y, x, h, w, 2.0)
         p3 = fill_larger_patch(y3, x3, h3, w3)
         p3 = cv2.resize(p3, (h, w), interpolation=cv2.INTER_AREA)
+        if p3.ndim == 2:
+            p3 = np.expand_dims(p3, axis=-1)
 
         # Stack multiple patches into RGB-axis of (H, W, RGB) without new dim
         return np.concatenate([p1, p3], axis=2)
@@ -438,57 +440,6 @@ class CoordEyePatchWrapper(gym.Wrapper):
         coords = self._get_coord_channels()
         obs = np.concatenate((obs, coords), axis=2)
         return obs, rew, term, trunc, info
-
-# TODO: probably get rid of this old class.
-class Environment:
-    """
-    Wrapper class for gym Atari environment + configs.
-    """
-
-    def __init__(
-        self,
-        display_mode: str,
-        game_name: str,
-        record_dir: str,
-        verbose: bool,
-        seed: int,
-        episode_rec_freq: int,
-        wrappers: list,
-        wrappers_kwargs: list
-    ):
-        # Init environment based on display mode (human/rgb_array)
-        d_mode = "human" if display_mode == "human" else "rgb_array"
-        self.env = gym.make(game_name, render_mode=d_mode)
-        self.env.action_space.seed(seed)
-
-        # Recording wrapper
-        today = datetime.now(tz=UTC).strftime(DEFAULT_DATETIME)
-        if display_mode == "record":
-            self.env = gym.wrappers.RecordVideo(
-                self.env,
-                episode_trigger=lambda x: x % episode_rec_freq == 0,
-                video_folder=record_dir,
-                name_prefix=f"{today}-rec"
-            )
-
-        # Add other wrappers to this env
-        for wrapper, kwargs in zip(wrappers, wrappers_kwargs):
-            self.env = wrapper(self.env, **kwargs)
-
-    def reset(self):
-        return self.env.reset()
-
-    def step(self, act):
-        return self.env.step(act)
-
-    def obs_space(self):
-        return self.env.observation_space
-
-    def act_space(self):
-        return self.env.action_space
-
-    def close(self):
-        self.env.close()
 
 class EpisodicLifeWrapper(gym.Wrapper):
     # different from AtariPreprocessing: real reset only when game over
