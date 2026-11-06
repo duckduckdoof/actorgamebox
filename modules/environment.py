@@ -93,7 +93,7 @@ def eye_env(
         mov_scale:          float                           = 1.0,
         max_sacchades:      int                             = 10,
         sacchade_penalty:   float                           = -0.1,
-        multi_patch:        bool                            = True,
+        multi_patch:        list | None                     = None,
         coord_conv:         bool                            = True,
 
         # Make the game or set it up for later
@@ -234,7 +234,7 @@ class EyePatchWrapper(gym.Wrapper):
             raise TypeError("patch_size must be either int or tuple[int, int].")
 
         # The last dim of frame is color channels (RGB)
-        if multi_patch:
+        if multi_patch and isinstance(multi_patch, list):
             self.obs_shape = (*self.patch_size, self.game_env.observation_space.shape[-1] * (len(multi_patch)+1))
             self.multi_patch = multi_patch
         else:
