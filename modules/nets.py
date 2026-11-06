@@ -25,6 +25,7 @@ from modules import utils
 torchvision.disable_beta_transforms_warning()
 import torchvision.transforms.v2
 
+
 # FUNCTIONS
 # Initializers
 def _norm_init_(mod):
@@ -80,7 +81,7 @@ def _get_factory(factories, value, key_id='type'):
 def _build_module(factories, value, *args, none_identity=True, key_id='type', extra_kwargs=None):
     factory = _get_factory(factories, value, key_id)
     if extra_kwargs is None:
-        extra_kwargs = dict()
+        extra_kwargs = {}
     result = factory(*args, **extra_kwargs)
     if result is None and none_identity:
         result = nn.Identity()
@@ -94,7 +95,7 @@ def _build_modules(factories, values, args=None, none_identity=True, key_id='typ
         mod = _build_module(
             factories,
             values[i],
-            *(args[i] if args is not None else tuple()),
+            *(args[i] if args is not None else ()),
             none_identity=False,
             key_id=key_id,
             extra_kwargs=extra_kwargs[i] if extra_kwargs is not None else None
@@ -148,9 +149,9 @@ def weight_decay_param_groups(module):
     param_dict = dict(module.named_parameters())
     inter_params = decay & no_decay
     union_params = decay | no_decay
-    assert len(inter_params) == 0, f"parameters {str(inter_params)} is in either decay/no decay sets"
+    assert len(inter_params) == 0, f"parameters {inter_params!s} is in either decay/no decay sets"
     assert len(param_dict.keys() - union_params) == 0, \
-        f"parameters {str(param_dict.keys() - union_params)} were not seperated to either decay/no decay set"
+        f"parameters {(param_dict.keys() - union_params)!s} were not seperated to either decay/no decay set"
 
     return [
         {'params': [param_dict[name] for name in sorted(decay)]},
