@@ -16,7 +16,7 @@ import torch
 from ruamel import yaml
 
 import wandb
-from configs import globals as g
+from configs.globals import ROM
 from modules import environment as e
 from modules import utils
 from modules.actor_critic import ActorCriticPolicy
@@ -26,7 +26,7 @@ from modules.wm import WorldModel
 
 
 # MAIN
-def main(game=g.ROMS[15]):
+def main(game=ROM.Pong_NoFrameskip):
     parser = ArgumentParser()
     parser.add_argument("--device", type=str, required=True, help='Device used for training')
     parser.add_argument("--game", type=str, required=True, default=game, help="Choice of Atari game")

@@ -12,7 +12,6 @@ From https://github.com/jrobine/sgf/blob/main/src/utils.py
 """
 
 # IMPORTS
-import os
 import warnings
 from copy import deepcopy
 from dataclasses import dataclass
