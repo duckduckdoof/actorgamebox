@@ -224,4 +224,5 @@ models/
 tmp/
 wandb/
 test/
+sandbox/
 nohup.out
