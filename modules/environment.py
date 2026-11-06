@@ -14,15 +14,12 @@ Create and run atari-based environment.
 import os
 os.environ['SDL_VIDEODRIVER'] = "x11"
 
-from datetime import UTC, datetime
 from functools import partial
 
 import ale_py
 import cv2
 import gymnasium as gym
 import numpy as np
-
-from configs.defaults import DEFAULT_DATETIME
 
 # Register ALE before using the Atari ROMs
 gym.register_envs(ale_py)
@@ -194,12 +191,12 @@ class EyePatchWrapper(gym.Wrapper):
     def __init__(
             self, 
             env: gym.Env,
+            multi_patch: list[float] | None = None,
             patch_size: int | tuple[int, int] = 30,
             patch_pos: tuple[int, int] | np.ndarray = (0,0),
             mov_scale: float = 1.0,
             max_sacchades: int = 10,
             sacchade_penalty: float = -0.1,
-            multi_patch: bool = False
         ):
         super().__init__(env)
         self.game_env = env
@@ -214,11 +211,11 @@ class EyePatchWrapper(gym.Wrapper):
 
         # The last dim of frame is color channels (RGB)
         if multi_patch:
-            self.obs_shape = (*self.patch_size, self.game_env.observation_space.shape[-1] * 2)
-            self.multi_patch = True
+            self.obs_shape = (*self.patch_size, self.game_env.observation_space.shape[-1] * (len(multi_patch)+1))
+            self.multi_patch = multi_patch
         else:
             self.obs_shape = (*self.patch_size, self.game_env.observation_space.shape[-1])
-            self.multi_patch = False
+            self.multi_patch = None
         self.observation_space = gym.spaces.Box(0, 255, self.obs_shape, dtype=np.uint8)
 
         if isinstance(patch_pos, tuple):
@@ -315,20 +312,18 @@ class EyePatchWrapper(gym.Wrapper):
                     p2[j, i] = self.frame[tuple(coords[j, i])]
             return p2
 
-        # Get larger (1.5x) patch from the first, then resize to original patch size.
-        #y2, x2, h2, w2 = get_larger_patch(y, x, h, w, 1.5)
-        #p2 = fill_larger_patch(y2, x2, h2, w2)
-        #p2 = cv2.resize(p2, (h, w), interpolation=cv2.INTER_AREA)
-
-        # Get final (2.0x) patch from the first, then resize to original patch size.
-        y3, x3, h3, w3 = get_larger_patch(y, x, h, w, 2.0)
-        p3 = fill_larger_patch(y3, x3, h3, w3)
-        p3 = cv2.resize(p3, (h, w), interpolation=cv2.INTER_AREA)
-        if p3.ndim == 2:
-            p3 = np.expand_dims(p3, axis=-1)
+        # Get patches from the first, then resize to original patch size.
+        multi_patches = [p1]
+        for scale in self.multi_patch:
+            y2, x2, h2, w2 = get_larger_patch(y, x, h, w, scale) 
+            p2 = fill_larger_patch(y2, x2, h2, w2)
+            p2 = cv2.resize(p2, (h, w), interpolation=cv2.INTER_AREA)
+            if p2.ndim == 2:
+                p2 = np.expand_dims(p2, axis=-1)
+            multi_patches.append(p2)
 
         # Stack multiple patches into RGB-axis of (H, W, RGB) without new dim
-        return np.concatenate([p1, p3], axis=2)
+        return np.concatenate(multi_patches, axis=2)
 
     def _update_patch_pos(self, disp: np.ndarray):
         """ Given vector displacement of patch position, update location """
