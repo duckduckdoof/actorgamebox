@@ -14,9 +14,9 @@ import time
 
 import torch
 
-from modules import replay_buffer as rb
 from modules import utils
 from modules.agent import AgentTrainer
+from modules.memory import ReplayBuffer
 from modules.wm import WorldModelTrainer
 
 
@@ -44,7 +44,7 @@ class Trainer:
 
         # Init replay buffer
         start_o, _ = env.reset(seed=seed)
-        replay_buffer = rb.ReplayBuffer(
+        replay_buffer = ReplayBuffer(
             env.observation_space,
             agent.stack_act_space,
             env_steps,
