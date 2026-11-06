@@ -277,24 +277,24 @@ def _flatten_multidiscrete(space, x, dtype=None):
     return F.one_hot(x.long(), num_cats).type(dtype).flatten(-2, -1)
 
 @singledispatch
-def space_zeros(space, size=tuple(), device=None):
+def space_zeros(space, size=(), device=None):
     raise NotImplementedError(f"Unknown space: '{space}'")
 
 @space_zeros.register(gym.spaces.Box)
 @space_zeros.register(gym.spaces.MultiBinary)
-def _zeros_box_multibinary(space, size=tuple(), device=None):
+def _zeros_box_multibinary(space, size=(), device=None):
     if isinstance(size, int):
         size = (size,)
     return torch.zeros(size + tuple(space.shape), dtype=np_to_torch_dtype(space.dtype), device=device)
 
 @space_zeros.register(gym.spaces.Discrete)
-def _zeros_discrete(space, size=tuple(), device=None):
+def _zeros_discrete(space, size=(), device=None):
     if isinstance(size, int):
         size = (size,)
     return torch.zeros(size, dtype=torch.int32, device=device)
 
 @space_zeros.register(gym.spaces.MultiDiscrete)
-def _zeros_discrete(space, size=tuple(), device=None):
+def _zeros_discrete(space, size=(), device=None):
     if isinstance(size, int):
         size = (size,)
     return torch.zeros(size + tuple(space.shape), dtype=torch.int32, device=device)
@@ -333,7 +333,7 @@ def map_structure(fn, value, skip_none=True):
 def flatten_structure(value, skip_none=False):
     """ Flatten a (possibly nested) structure into a tuple """
     if skip_none and value is None:
-        return tuple()
+        return ()
     if isinstance(value, (tuple, list)):
         result = []
         for v in value:
@@ -526,7 +526,7 @@ class Aggregator:
                 self.history.setdefault(k, []).append(v)
 
     def aggregate(self):
-        result = dict()
+        result = {}
         if self.history is None:
             return result
 
@@ -596,7 +596,7 @@ class EpisodeCollector:
                 # We assume '0' is noop for actions
                 a.fill(0)
                 a[cont] = cont_a
-                next_o, next_r, next_term, next_trunc, info = vector_env.step(a)
+                next_o, next_r, next_term, next_trunc, _ = vector_env.step(a)
                 next_done = next_term | next_trunc
                 agg = step_fn(agg, cont, o, a, next_o, next_r, next_term, next_trunc)
                 just_done = next_done[cont]

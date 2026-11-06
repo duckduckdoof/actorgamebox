@@ -16,11 +16,11 @@ import torch
 from ruamel import yaml
 
 import wandb
-from modules_new import envs, utils
-from modules_new.actor_critic import ActorCriticPolicy
-from modules_new.agent import Agent
-from modules_new.trainer import Trainer
-from modules_new.wm import WorldModel
+from modules import envs, utils
+from modules.actor_critic import ActorCriticPolicy
+from modules.agent import Agent
+from modules.trainer import Trainer
+from modules.wm import WorldModel
 
 
 # MAIN

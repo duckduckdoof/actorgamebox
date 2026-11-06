@@ -18,7 +18,8 @@ from torch import nn
 from torchvision.utils import make_grid
 
 import wandb
-from modules_new import nets, utils
+from modules import nets
+from modules import utils
 
 
 # CLASSES

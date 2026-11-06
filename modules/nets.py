@@ -20,7 +20,7 @@ import torch.nn.functional as F
 import torchvision
 from torch import nn, optim
 
-from modules_new import utils
+from modules import utils
 
 torchvision.disable_beta_transforms_warning()
 import torchvision.transforms.v2

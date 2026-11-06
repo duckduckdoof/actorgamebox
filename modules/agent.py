@@ -18,7 +18,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from modules_new import utils
+from modules import utils
 
 
 # CLASSES

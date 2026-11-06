@@ -18,11 +18,11 @@ from ruamel import yaml
 import wandb
 from configs import globals as g
 from modules import environment as e
-from modules_new import utils
-from modules_new.actor_critic import ActorCriticPolicy
-from modules_new.agent import Agent
-from modules_new.trainer import Trainer
-from modules_new.wm import WorldModel
+from modules import utils
+from modules.actor_critic import ActorCriticPolicy
+from modules.agent import Agent
+from modules.trainer import Trainer
+from modules.wm import WorldModel
 
 
 # MAIN

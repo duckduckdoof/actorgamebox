@@ -14,10 +14,10 @@ import time
 
 import torch
 
-from modules_new import replay_buffer as rb
-from modules_new import utils
-from modules_new.agent import AgentTrainer
-from modules_new.wm import WorldModelTrainer
+from modules import replay_buffer as rb
+from modules import utils
+from modules.agent import AgentTrainer
+from modules.wm import WorldModelTrainer
 
 
 # CLASSES
