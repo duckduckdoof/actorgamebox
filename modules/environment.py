@@ -88,7 +88,7 @@ def eye_env(
         grayscale:          bool = False,
 
         # Eye env args
-        patch_size:         int | tuple[int, int]           = 30,
+        patch_size:         int | tuple[int, int]           = 64,
         patch_pos:          tuple[int, int] | np.ndarray    = (0,0),
         mov_scale:          float                           = 1.0,
         max_sacchades:      int                             = 10,
