@@ -11,7 +11,7 @@ Agent wrapper for actor.
 
 # IMPORTS
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 import gymnasium as gym
 import numpy as np
@@ -24,7 +24,7 @@ from modules import utils
 # CLASSES
 @dataclass
 class AgentState:
-    action_stack: Optional[Any]
+    action_stack: Any | None
 
     def map(self, fn):
         """ Apply a function to the state, element-wise """

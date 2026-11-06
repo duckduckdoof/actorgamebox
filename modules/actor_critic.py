@@ -13,8 +13,7 @@ NN Design of the AC module.
 import torch
 from torch import nn
 
-from modules import nets
-from modules import utils
+from modules import nets, utils
 
 
 # CLASSES
