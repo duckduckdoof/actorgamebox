@@ -23,11 +23,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch._dynamo
-import torch.distributed as dist
 import torch.nn.functional as F
 from IPython.display import HTML
 from matplotlib.animation import FuncAnimation
-from torch.nn.parallel import DistributedDataParallel as DDP
 
 from configs.constants import LUMA_VALS
 
@@ -59,27 +57,6 @@ def np_to_torch_dtype(np_dtype):
         return _numpy_to_torch_dtype_dict[np_dtype]
     except KeyError:
         return _numpy_to_torch_dtype_dict[np_dtype.type]
-
-# Parallel Processing for multi-gpu work.
-def setup_distributed():
-    dist.init_process_group(backend="nccl")
-    l_rank = int(os.environ['LOCAL_RANK'])
-    torch.cuda.set_device(l_rank)
-    return l_rank
-
-def cleanup_devices():
-    dist.destroy_process_group()
-
-def compile_ddp(mod, disable, l_rank=None):
-    if callable(mod):
-        has_grad_params = True
-    else:
-        has_grad_params = any(p.requires_grad for p in mod.parameters())
-    if has_grad_params and l_rank:
-        md = DDP(mod, device_ids=[l_rank])
-    else:
-        md = mod
-    return torch.compile(md, dynamic=True, disable=disable)
 
 # Seeding.
 
