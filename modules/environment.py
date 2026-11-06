@@ -12,6 +12,7 @@ Create and run atari-based environment.
 # IMPORTS
 # This is needed to specify which video driver to use (linux).
 import os
+
 os.environ['SDL_VIDEODRIVER'] = "x11"
 
 from functools import partial
@@ -21,15 +22,17 @@ import cv2
 import gymnasium as gym
 import numpy as np
 
+from configs.globals import ROM
+
 # Register ALE before using the Atari ROMs
 gym.register_envs(ale_py)
 
 def simple_atari_env(
-        game_name: str, 
-        max_frames: int = 108000, 
-        full_action_space=False, 
-        episodic_life: bool = True,
-        make=True
+        game_name:          str  = ROM.Pong_NoFrameskip, 
+        max_frames:         int  = 108000, 
+        full_action_space:  bool = False, 
+        episodic_life:      bool = True,
+        make:               bool = True
     ):
     """ Much simpler atari environment. """
     env_id = game_name
@@ -54,25 +57,25 @@ def simple_atari_env(
 
 def eye_env(
         # Gym game args
-        game_name: str,
-        max_frames: int = 108000, 
-        full_action_space: bool = False, 
-        frame_skip: int = 1,
-        frame_stack: int = 1,
-        episodic_life: bool = True,
-        grayscale: bool = False,
+        game_name:          str  = ROM.Pong_NoFrameskip,
+        max_frames:         int  = 108000, 
+        full_action_space:  bool = False, 
+        frame_skip:         int  = 1,
+        frame_stack:        int  = 1,
+        episodic_life:      bool = True,
+        grayscale:          bool = False,
 
         # Eye env args
-        patch_size: int | tuple[int, int] = 30,
-        patch_pos: tuple[int, int] | np.ndarray = (0,0),
-        mov_scale: float = 1.0,
-        max_sacchades: int = 10,
-        sacchade_penalty: float = -0.1,
-        multi_patch: bool = True,
-        coord_conv: bool = True,
+        patch_size:         int | tuple[int, int]           = 30,
+        patch_pos:          tuple[int, int] | np.ndarray    = (0,0),
+        mov_scale:          float                           = 1.0,
+        max_sacchades:      int                             = 10,
+        sacchade_penalty:   float                           = -0.1,
+        multi_patch:        bool                            = True,
+        coord_conv:         bool                            = True,
 
         # Make the game or set it up for later
-        make=True
+        make: bool = True
     ):
     """
     Atari environment, including eye sacchade wrapper for additional actions.
@@ -120,16 +123,16 @@ def eye_env(
         return env_id, wrappers, kwargs
 
 def atari_env(
-        game_name: str,
-        episodic_life: bool = False,
-        full_action_space: bool = False,
-        make: bool = True,
-        grayscale: bool = False,
-        frame_skip: int | None = 1,
-        frame_stack: int | None = None,
-        resolution: int | tuple[int, int] | None = None,
-        noop_max: int = 30,
-        max_frames: int = 108000,
+        game_name:          str                             = ROM.Pong_NoFrameskip,
+        episodic_life:      bool                            = False,
+        full_action_space:  bool                            = False,
+        make:               bool                            = True,
+        grayscale:          bool                            = False,
+        frame_skip:         int | None                      = 1,
+        frame_stack:        int | None                      = None,
+        resolution:         int | tuple[int, int] | None    = None,
+        noop_max:           int                             = 30,
+        max_frames:         int                             = 108000,
     ):
     if max_frames > 108000:
         raise NotImplementedError("NoFrameskip-v4 does not support max frames > 108000")
@@ -190,13 +193,13 @@ class EyePatchWrapper(gym.Wrapper):
 
     def __init__(
             self, 
-            env: gym.Env,
-            multi_patch: list[float] | None = None,
-            patch_size: int | tuple[int, int] = 30,
-            patch_pos: tuple[int, int] | np.ndarray = (0,0),
-            mov_scale: float = 1.0,
-            max_sacchades: int = 10,
-            sacchade_penalty: float = -0.1,
+            env:                gym.Env,
+            multi_patch:        list[float] | None              = None,
+            patch_size:         int | tuple[int, int]           = 30,
+            patch_pos:          tuple[int, int] | np.ndarray    = (0,0),
+            mov_scale:          float                           = 1.0,
+            max_sacchades:      int                             = 10,
+            sacchade_penalty:   float                           = -0.1,
         ):
         super().__init__(env)
         self.game_env = env
@@ -342,8 +345,6 @@ class EyePatchWrapper(gym.Wrapper):
 
     def reset(self, seed: int | None = None, options = None):
         """ Starts a new episode. """
-        super().reset(seed=seed)
-
         self.eye_itrs, self.game_itrs = 0, 0
 
         # Reset the game environment + eye postition on frame.
