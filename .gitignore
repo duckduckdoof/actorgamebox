@@ -220,6 +220,7 @@ __marimo__/
 # Custom file exemptions
 recordings/
 logs/
+models/
 tmp/
 wandb/
 nohup.out
