@@ -159,7 +159,7 @@ class WorldModel(nn.Module):
         reward_stats = self.rew_predictor.get_stats(inp, full_precision=True)
         reward_loss = self.rew_predictor.loss(reward_stats, next_r)
         term_stats = self.term_predictor.get_stats(inp, full_precision=True)
-        term_loss = self.term_predictor.loss(term_stats, next_r)
+        term_loss = self.term_predictor.loss(term_stats, next_term)
 
         repr_loss = self.sim_coef * sim_loss + self.var_coef * var_loss + self.cov_coef * cov_loss + \
             self.rew_coef * reward_loss + self.term_coef * term_loss
