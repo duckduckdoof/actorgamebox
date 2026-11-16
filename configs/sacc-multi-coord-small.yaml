@@ -4,7 +4,7 @@ env: &game_env
   full_action_space: false
   max_frames: 20000
   episodic_life: true
-  grayscale: true
+  grayscale: false
   frame_skip: 4
   frame_stack: 4
   patch_size: 64
@@ -107,8 +107,8 @@ policy:
     high: 20
 
 trainer:
-  env_steps: 300000
-  init_steps: 9000
+  env_steps: 140000
+  init_steps: 10000
   env_eps: 0.01
   env_temp: 1.0
   wm_every: 5
@@ -117,14 +117,14 @@ trainer:
   eval_every: 2500
 
   wm_trainer:
-    batch_size: 1024
+    batch_size: 512
 
     augmentation: null
 
     repr_optim:
       type: adamw
-      base_lr: 1.5e-4
-      end_lr: 1e-5
+      base_lr: 1.0e-4
+      end_lr: 1.5e-4
       warmup_its: 5000
       betas: [ 0.9, 0.999 ]
       eps: 1e-8
@@ -134,12 +134,12 @@ trainer:
     trans_optim:
       type: adamw
       base_lr: 1.5e-4
-      end_lr: 1e-5
+      end_lr: 3e-4
       warmup_its: 5000
       betas: [ 0.9, 0.999 ]
       eps: 1e-8
       weight_decay: 0.001
-      clip: 5.0
+      clip: 500.0
 
     debug:
       dream_horizon: 30
@@ -164,7 +164,7 @@ trainer:
         clip: 1000.0
 
   agent_trainer:
-    batch_size: 3072
+    batch_size: 512
     horizon: 10
 
     eval_env:
@@ -190,8 +190,8 @@ trainer:
 
       actor_optimizer:
         type: adamw
-        base_lr: 1e-4
-        end_lr: 5e-5
+        base_lr: 1e-7
+        end_lr: 2e-7
         warmup_its: 0
         betas: [ 0.9, 0.999 ]
         eps: 1e-5
@@ -200,8 +200,8 @@ trainer:
 
       critic_optimizer:
         type: adamw
-        base_lr: 1e-4
-        end_lr: 5e-5
+        base_lr: 1e-7
+        end_lr: 2e-7
         warmup_its: 0
         betas: [ 0.9, 0.999 ]
         eps: 1e-5
