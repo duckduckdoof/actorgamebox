@@ -4,11 +4,10 @@
 
 GAME="${1:-Pong}"
 SEED="${2:-27}"
-ITR="${3:-1}"
 
-/home/cwscott3/actorgamebox/kickoff.sh sgf 0 $GAME base $SEED $ITR &
-/home/cwscott3/actorgamebox/kickoff.sh mods 1 $GAME sacc $SEED $ITR &
-/home/cwscott3/actorgamebox/kickoff.sh mods 2 $GAME sacc-coord $SEED $ITR &
+/home/cwscott3/actorgamebox/kickoff.sh sgf 0 $GAME base $SEED &
+/home/cwscott3/actorgamebox/kickoff.sh mods 1 $GAME sacc $SEED &
+/home/cwscott3/actorgamebox/kickoff.sh mods 2 $GAME sacc-coord $SEED &
 
 wait
 echo "All primary variations finished"

@@ -12,8 +12,6 @@ CONFIG="${4:-base}"
 
 SEED="${5:-27}"
 
-ITR="${6:-1}"
-
 # Run in the background
 nohup python ${SCRIPT}.py \
 	--device cuda:${CUDA} \
@@ -23,6 +21,6 @@ nohup python ${SCRIPT}.py \
 	--amp \
 	--compile \
 	--seed $SEED \
-	--name $GAME.$SEED-$CONFIG-$ITR \
+	--name $GAME.$SEED-$CONFIG \
 	--group $GAME \
 	&
