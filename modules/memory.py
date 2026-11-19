@@ -147,8 +147,6 @@ class ReplayBuffer:
     def get_stats(self):
         """ Buffer statistics, from episode rewards """
         episode_rewards = np.array(self.episode_rewards)
-        # print(f"Episode rewards: {episode_rewards}")
-        # print(f"Capacity: {self.len}/{self.capacity}")
         return {
             'buffer_size': self.len,
             'buffer_episodes': len(episode_rewards),
@@ -161,16 +159,22 @@ class SaccReplayBuffer:
     For storing transitions, and eye positions.
 
     For the time being, I'm making this separate from the standard replay buffer.
+
+    start_eye -> [B, F, 2] dims
     """
 
     def __init__(self, obs_space, act_space, capacity, start_o, start_eye, device):
         self.obs_space = obs_space
         self.act_space = act_space
 
+        # B, F, H, W, C
         self.obs = utils.space_zeros(obs_space, capacity, device=device)
-        print(obs_space.shape)
-        print(self.obs.shape)
-        self.eye = torch.zeros((capacity, *obs_space.shape), dtype=torch.float32, device=device)
+
+        # Eye movements match batch + frame stack dims
+        b, f, _, _, _ = self.obs.shape
+        obs_eye_space = (b, f, 2)
+        self.eye = torch.zeros(obs_eye_space, dtype=start_eye.dtype, device=device)
+
         self.acts = utils.space_zeros(act_space, capacity, device=device)
         self.next_rew = torch.zeros(capacity, dtype=torch.float32, device=device)
         self.next_terms = torch.zeros(capacity, dtype=torch.bool, device=device)
@@ -178,6 +182,7 @@ class SaccReplayBuffer:
         self.next_obs = utils.space_zeros(obs_space, capacity, device=device)
 
         self.obs[0] = torch.as_tensor(np.array(start_o)).to(device=device, non_blocking=True)
+        self.eye[0] = torch.as_tensor(np.array(start_eye)).to(device=device, non_blocking=True)
         self.len = 0
 
         self.episode_reward = 0.0
@@ -188,6 +193,7 @@ class SaccReplayBuffer:
             return self
 
         self.obs = self.obs.to(device, non_blocking=True)
+        self.eye = self.eye.to(device, non_blocking=True)
         self.acts = self.acts.to(device, non_blocking=True)
         self.next_rew = self.next_rew.to(device, non_blocking=True)
         self.next_terms = self.next_terms.to(device, non_blocking=True)
@@ -218,10 +224,11 @@ class SaccReplayBuffer:
     def get(self, idx, *keys):
         """ Return transitions at selcted indices """
         if len(keys) == 0:
-            keys = ('o', 'a', 'next_r', 'next_term', 'next_trunc', 'next_o')
+            keys = ('o', 'eye', 'a', 'next_r', 'next_term', 'next_trunc', 'next_o')
 
         tensors = {
             'o': self.obs,
+            'eye': self.eye,
             'a': self.acts,
             'next_r': self.next_rew,
             'next_term': self.next_terms,
@@ -256,7 +263,7 @@ class SaccReplayBuffer:
         else:
             raise ValueError()
 
-    def step(self, a, next_o, next_r, next_term, next_trunc, cont_o):
+    def step(self, a, next_o, next_eye, next_r, next_term, next_trunc, cont_o, cont_eye):
         """ Add transition tuple to buffer """
         if self.len >= self.capacity:
             raise ValueError('Buffer is full')
@@ -265,6 +272,10 @@ class SaccReplayBuffer:
         next_o = torch.as_tensor(np.array(next_o), dtype=self.obs.dtype)\
                 .to(device=self.obs.device, non_blocking=True)
         self.next_obs[i] = next_o
+
+        next_eye = torch.as_tensor(np.array(next_eye), dtype=self.eye.dtype)\
+                .to(device=self.eye.device, non_blocking=True)
+        self.eye[i] = next_eye
 
         self.acts[i] = a
         self.next_rew[i] = next_r
@@ -277,12 +288,15 @@ class SaccReplayBuffer:
         if next_term or next_trunc:
             next_o = torch.as_tensor(np.array(cont_o), dtype=self.obs.dtype)\
                     .to(device=self.obs.device, non_blocking=True)
+            next_eye = torch.as_tensor(np.array(cont_eye), dtype=self.obs.dtype)\
+                    .to(device=self.obs.device, non_blocking=True)
             self.episode_rewards.append(self.episode_reward)
             self.episode_reward = 0.0
 
         self.len += 1
         if self.len < self.capacity:
             self.obs[self.len] = next_o
+            self.eye[self.len] = next_eye
 
         next_r = self.next_rew[i]
         next_term = self.next_terms[i]
@@ -297,8 +311,6 @@ class SaccReplayBuffer:
     def get_stats(self):
         """ Buffer statistics, from episode rewards """
         episode_rewards = np.array(self.episode_rewards)
-        # print(f"Episode rewards: {episode_rewards}")
-        # print(f"Capacity: {self.len}/{self.capacity}")
         return {
             'buffer_size': self.len,
             'buffer_episodes': len(episode_rewards),
