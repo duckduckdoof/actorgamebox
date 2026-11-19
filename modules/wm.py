@@ -74,13 +74,14 @@ class WorldModel(nn.Module):
         if dtype is None:
             dtype = torch.float
 
-        # (B, F, H, W, C) -> (B, F * C, H, W) F=num frames
+        # (B, F, H, W, C) -> (B, F * C, H, W) F=num frames in the action stack
         o = o.detach().permute(0, 1, 4, 2, 3).flatten(1,2)
 
         if o.dtype != dtype:
             was_uint8 = (o.dtype == torch.uint8)
             o = o.to(dtype=dtype, memory_format=torch.channels_last)
             if was_uint8:
+                # Ensure the values are [0,1] floating point
                 o = o / 255
         else:
             o = o.to(memory_format=torch.channels_last)

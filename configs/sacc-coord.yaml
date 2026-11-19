@@ -107,12 +107,12 @@ policy:
     high: 20
 
 trainer:
-  env_steps: 300000
-  init_steps: 9000
+  env_steps: 100000
+  init_steps: 5000
   env_eps: 0.01
   env_temp: 1.0
-  wm_every: 5
-  agent_every: 5
+  wm_every: 2
+  agent_every: 2
   log_every: 100
   eval_every: 2500
 
@@ -133,13 +133,13 @@ trainer:
 
     trans_optim:
       type: adamw
-      base_lr: 1.5e-4
+      base_lr: 3e-4
       end_lr: 1e-5
       warmup_its: 5000
       betas: [ 0.9, 0.999 ]
       eps: 1e-8
       weight_decay: 0.001
-      clip: 5.0
+      clip: 500.0
 
     debug:
       dream_horizon: 30

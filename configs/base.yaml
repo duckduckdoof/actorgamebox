@@ -103,7 +103,7 @@ policy:
     high: 20
 
 trainer:
-  env_steps: 300000
+  env_steps: 100000
   init_steps: 5000
   env_eps: 0.01
   env_temp: 1.0
@@ -137,7 +137,7 @@ trainer:
       betas: [ 0.9, 0.999 ]
       eps: 1e-8
       weight_decay: 0.001
-      clip: 5.0
+      clip: 500.0
 
     debug:
       dream_horizon: 30

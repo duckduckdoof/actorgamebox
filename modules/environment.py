@@ -49,11 +49,13 @@ def simple_atari_env(
         game_name:          str  = ROM.Pong_NoFrameskip, 
         max_frames:         int  = 108000, 
         full_action_space:  bool = False, 
+        frame_skip:         int  = 1,
+        frame_stack:        int  = 1,
         episodic_life:      bool = True,
         grayscale:          bool = False,
         make:               bool = True
     ):
-    """ Much simpler atari environment. """
+    """ Much simpler atari environment. Does not resize the game frames. """
     env_id = game_name
     wrappers = [
         partial(
@@ -61,10 +63,20 @@ def simple_atari_env(
             max_episode_steps=max_frames
         ),
         partial(
+            gym.wrappers.RepeatAction,
+            num_repeats=frame_skip
+        ),
+        partial(
+            gym.wrappers.FrameStackObservation,
+            stack_size=frame_stack
+        ),
+        partial(
             gym.wrappers.GrayscaleObservation,
             keep_dim=True
         ) if grayscale else None,
-        EpisodicLifeWrapper if episodic_life else None
+        EpisodicLifeWrapper if episodic_life else None,
+        FireResetWrapper if episodic_life and game_name == 'Breakout' else None,
+        FireLifeWrapper if not episodic_life and game_name == 'Breakout' else None,
     ]
     wrappers = [w for w in wrappers if w]
     kwargs = {'full_action_space': full_action_space}

@@ -347,6 +347,49 @@ class CoordsConv(nn.Module):
         # Make sure to concatenate the channels on the channel dim
         return torch.cat([x, yy_channel, xx_channel], dim=1)
 
+class EyePatch(nn.Module):
+    """
+    nn.Module implementation of taking an unmodified frame, and producing a stack
+    of 'patches' centered at (normalized) coordinates with zoom.
+
+    This mimics the foveation of saccadic eye movement:
+    - it has fine-grained, low field of view
+    - it has coarse-grained, wide field of view
+    """
+    def __init__(self, patch_size: int | tuple[int, int]):
+        super().__init__()
+        if isinstance(patch_size, int):
+            self.patch_size = (patch_size, patch_size)
+        else:
+            self.patch_size = patch_size
+
+    def forward(self, x, focus, zoom: float):
+        """
+        Returns stack of patches centered on a focus, at a given zoom for 
+        every RGB/gray image provided from the experience buffer.
+
+        2.0 zoom means that we sample 0.5
+        """
+        b = x.shape[0]
+        scale = 1/zoom
+
+        # coordinates of focus, by batch
+        # We are following that the first dimension in an image is y, then x
+        fy = focus[:, 0]
+        fx = focus[:, 1]
+
+        # Create affine transformation matrix
+        aff_trans = torch.zeros(b, 2, 3, device=x.device, dtype=x.dtype)
+        aff_trans[:, 0, 0] = scale
+        aff_trans[:, 1, 1] = scale
+        aff_trans[:, 0, 2] = fy
+        aff_trans[:, 1, 2] = fx
+
+        grid_sample = F.affine_grid(aff_trans, x.shape, align_corners=True)
+        patch = F.grid_sample(x, grid_sample, mode='bilinear', padding_mode='border', align_corners=True)
+
+        return patch
+
 class Sign(nn.Module):
 
     def forward(self, x):
