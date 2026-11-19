@@ -21,7 +21,7 @@ from modules import environment as e
 from modules import utils
 from modules.actor_critic import ActorCriticPolicy
 from modules.agent import Agent
-from modules.trainer import Trainer
+from modules.trainer import SaccTrainer
 from modules.wm import WorldModel
 
 
@@ -108,7 +108,7 @@ def main(game=ROM.Pong_NoFrameskip):
     )
 
     # Trainer
-    trainer = Trainer(
+    trainer = SaccTrainer(
         env, 
         env_selection,
         config.game,

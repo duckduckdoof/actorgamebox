@@ -173,7 +173,7 @@ class SaccReplayBuffer:
         # Eye movements match batch + frame stack dims
         b, f, _, _, _ = self.obs.shape
         obs_eye_space = (b, f, 2)
-        self.eye = torch.zeros(obs_eye_space, dtype=start_eye.dtype, device=device)
+        self.eye = torch.zeros(obs_eye_space, dtype=torch.uint8, device=device)
 
         self.acts = utils.space_zeros(act_space, capacity, device=device)
         self.next_rew = torch.zeros(capacity, dtype=torch.float32, device=device)
