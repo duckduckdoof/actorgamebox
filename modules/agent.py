@@ -208,13 +208,14 @@ class AgentTrainer:
 class SaccAgent(nn.Module):
     """ Policy wrapper for agent state """
 
-    def __init__(self, policy, single_action_space, action_stack, eye_space, eye_stack):
+    def __init__(self, act_policy, sacc_policy, single_action_space, action_stack, eye_space, eye_stack):
         super().__init__()
-        self.policy = policy
+        self.policy = act_policy
         self.single_act_space = single_action_space
         self.stack_act_space = gym.vector.utils.batch_space(single_action_space, action_stack)
         self.act_stack = action_stack
 
+        self.sacc_policy = sacc_policy
         self.eye_space = eye_space
         self.eye_stack = eye_stack
         self.stack_eye_space = (eye_stack, eye_space)
@@ -226,7 +227,11 @@ class SaccAgent(nn.Module):
         return state
 
     @torch.no_grad()
-    def _advance_state(self, state, cont_mask, a):
+    def _advance_state(self, state, cont_mask, a, e):
+        print(f"state: {type(state)}")
+        print(f"mask:  {type(cont_mask)}")
+        print(f"a:     {type(a)}")
+        print(f"e:     {type(e)}")
         stack = state.action_stack
         # When the stack is None (on init), make a stack of 0s mimicking the datatype of the action chosen.
         # In the case of atari, '0' as a choice means NOOP.
@@ -246,18 +251,32 @@ class SaccAgent(nn.Module):
 
     def act_random(self, state, cont_mask, rng):
         batch_size = cont_mask.shape[0]
+        # Make choice from discrete actions, batch_size times
         a = torch.as_tensor(
             rng.choice(self.single_act_space.n, batch_size),
             dtype=torch.long,
             device=cont_mask.device
         )
-        next_state, stacked_a = self._advance_state(state, cont_mask, a)
-        return a, stacked_a, next_state
+
+        # Make 2d-vector choice on interval [-1, 1], batch_size times
+        e = torch.as_tensor(
+            rng.uniform(-1, 1, size=(batch_size, 2)),
+            dtype=torch.long,
+            device=cont_mask.device
+        )
+
+        next_state, stacked_a, stacked_e = self._advance_state(state, cont_mask, a, e)
+        return a, stacked_a, e, stacked_e, next_state
 
     def act(self, state, cont_mask, x, temperature=1):
+        # Action decided by the actor-critic policy
         a = self.policy(x, temperature=temperature)
-        next_state, stacked_a = self._advance_state(state, cont_mask, a)
-        return a, stacked_a, next_state
+
+        # Saccade decided by the BoundedGaussianPolicy
+        e = self.sacc_policy(x)
+
+        next_state, stacked_a, stacked_e = self._advance_state(state, cont_mask, a, e)
+        return a, stacked_a, e, stacked_e, next_state
 
 class SaccAgentTrainer:
 

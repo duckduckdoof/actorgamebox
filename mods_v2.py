@@ -20,7 +20,7 @@ from configs.globals import ROM
 from modules import environment as e
 from modules import utils
 from modules.actor_critic import ActorCriticPolicy
-from modules.agent import Agent
+from modules.agent import SaccAgent
 from modules.trainer import SaccTrainer
 from modules.wm import SaccWorldModel
 
@@ -98,7 +98,7 @@ def main(game=ROM.Pong_NoFrameskip):
         compile_=compile_,
         device=device
     )
-    g_agent = Agent(
+    g_agent = SaccAgent(
         g_policy, 
         env.action_space, 
         config.action_stack, 
