@@ -179,7 +179,10 @@ class SaccReplayBuffer:
         self.next_rew = torch.zeros(capacity, dtype=torch.float32, device=device)
         self.next_terms = torch.zeros(capacity, dtype=torch.bool, device=device)
         self.next_truncs = torch.zeros(capacity, dtype=torch.bool, device=device)
+
         self.next_obs = utils.space_zeros(obs_space, capacity, device=device)
+
+        self.next_eye = torch.zeros(obs_eye_space, dtype=torch.uint8, device=device)
 
         self.obs[0] = torch.as_tensor(np.array(start_o)).to(device=device, non_blocking=True)
         self.eye[0] = torch.as_tensor(np.array(start_eye)).to(device=device, non_blocking=True)
@@ -199,6 +202,7 @@ class SaccReplayBuffer:
         self.next_terms = self.next_terms.to(device, non_blocking=True)
         self.next_truncs = self.next_truncs.to(device, non_blocking=True)
         self.next_obs = self.next_obs.to(device, non_blocking=True)
+        self.next_eye = self.next_eye.to(device, non_blocking=True)
 
         return self
 
@@ -224,7 +228,7 @@ class SaccReplayBuffer:
     def get(self, idx, *keys):
         """ Return transitions at selcted indices """
         if len(keys) == 0:
-            keys = ('o', 'eye', 'a', 'next_r', 'next_term', 'next_trunc', 'next_o')
+            keys = ('o', 'eye', 'a', 'next_r', 'next_term', 'next_trunc', 'next_o', 'next_eye')
 
         tensors = {
             'o': self.obs,
@@ -233,7 +237,8 @@ class SaccReplayBuffer:
             'next_r': self.next_rew,
             'next_term': self.next_terms,
             'next_trunc': self.next_truncs,
-            'next_o': self.next_obs
+            'next_o': self.next_obs,
+            'next_eye': self.next_eye
         }
         tensors = tuple(tensors[key] for key in keys)
         device = self.device

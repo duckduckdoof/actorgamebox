@@ -11,6 +11,8 @@ env: &game_env
 wm:
   y_dim: 512
   z_dim: 2048
+  sacc_resolution: 64
+  sacc_zooms: [2.0, 0.5]
 
   encoder:
     channels: 64-128-256-64

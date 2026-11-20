@@ -22,7 +22,7 @@ from modules import utils
 from modules.actor_critic import ActorCriticPolicy
 from modules.agent import Agent
 from modules.trainer import SaccTrainer
-from modules.wm import WorldModel
+from modules.wm import SaccWorldModel
 
 
 # MAIN
@@ -99,7 +99,7 @@ def main(game=ROM.Pong_NoFrameskip):
         device=device
     )
     g_agent = Agent(g_policy, env.action_space, config.action_stack)
-    wm = WorldModel(
+    wm = SaccWorldModel(
         env.observation_space, 
         g_agent.stack_act_space, 
         **config.wm, 
@@ -128,6 +128,7 @@ def main(game=ROM.Pong_NoFrameskip):
     print(f"World Model # params: {utils.num_params(wm)}")
     print(f"Game Agent  # params: {utils.num_params(g_agent)}")
 
+    print("Premature finish...")
     return
 
     # Train agent and WM

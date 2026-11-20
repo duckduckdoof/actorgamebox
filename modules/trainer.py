@@ -238,14 +238,15 @@ class SaccTrainer:
     def is_finished(self):
         return self.it >= (self.env_steps - self.init_steps - 1)
 
-    def _env_step(self, a, stacked_a):
+    def _env_step(self, a, stacked_a, eye, stacked_eye):
         env = self.env
         next_o, next_r, next_term, next_trunc, _ = env.step(a.cpu().item())
         cont_o = next_o
         if next_term or next_trunc:
             cont_o, _ = env.reset(seed=self.seed)
+            cont_eye = (0, 0)
         next_r, next_term, next_trunc, next_o = self.replay_buffer.step(
-            stacked_a, next_o, next_r, next_term, next_trunc, cont_o
+            stacked_a, next_o, stacked_eye, next_r, next_term, next_trunc, cont_o, cont_eye
         )
         self.cont_mask = utils.get_mask(~(next_term | next_trunc))
 

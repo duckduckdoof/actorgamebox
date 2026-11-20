@@ -71,6 +71,14 @@ def seed_all(seed):
 
 # Helpful mathematical functions.
 
+def norm_coords(coords: torch.Tensor, width: int, height: int):
+    hw = torch.tensor([height - 1, width - 1], dtype=coords.dtype, device=coords.device)
+    return 2.0 * (coords / hw) - 1.0
+
+def unnorm_coords(coords: torch.Tensor, width: int, height: int):
+    hw = torch.tensor([height - 1, width - 1], dtype=coords.dtype, device=coords.device)
+    return 0.5 * (coords + 1.0) * hw
+
 def hinge(x, target):
     """ Hinge loss """
     return F.relu(target - x)

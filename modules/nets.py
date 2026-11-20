@@ -355,6 +355,8 @@ class EyePatch(nn.Module):
     This mimics the foveation of saccadic eye movement:
     - it has fine-grained, low field of view
     - it has coarse-grained, wide field of view
+
+    (B, F, C, H, W) dims input.
     """
     def __init__(self, patch_size: int | tuple[int, int]):
         super().__init__()
@@ -363,14 +365,16 @@ class EyePatch(nn.Module):
         else:
             self.patch_size = patch_size
 
-    def forward(self, x, focus, zoom: float):
+    def _sample(self, x_flat, focus, zoom: float):
         """
         Returns stack of patches centered on a focus, at a given zoom for 
         every RGB/gray image provided from the experience buffer.
 
         2.0 zoom means that we sample 0.5
+
+        Our input must be (N, C, H, W), where N = (B, F)
         """
-        b = x.shape[0]
+        n = x_flat.shape[0]
         scale = 1/zoom
 
         # coordinates of focus, by batch
@@ -379,16 +383,32 @@ class EyePatch(nn.Module):
         fx = focus[:, 1]
 
         # Create affine transformation matrix
-        aff_trans = torch.zeros(b, 2, 3, device=x.device, dtype=x.dtype)
+        aff_trans = torch.zeros((n, 2, 3), device=x_flat.device, dtype=x_flat.dtype)
         aff_trans[:, 0, 0] = scale
         aff_trans[:, 1, 1] = scale
         aff_trans[:, 0, 2] = fy
         aff_trans[:, 1, 2] = fx
 
-        grid_sample = F.affine_grid(aff_trans, x.shape, align_corners=True)
-        patch = F.grid_sample(x, grid_sample, mode='bilinear', padding_mode='border', align_corners=True)
+        size = (*x_flat.shape[0, 1], *self.patch_size)
+        grid_sample = F.affine_grid(aff_trans, size, align_corners=True)
+        patch = F.grid_sample(x_flat, grid_sample, mode='bilinear', padding_mode='border', align_corners=True)
 
         return patch
+
+    def forward(self, x, focus, zooms: list[float]):
+        b, f, c, _, _ = x.shape
+        out_h, out_w = self.patch_size[0], self.patch_size[1]
+        # (B, F, C, H, W) -> (B * F, C, H, W)
+        flat_x = x.flatten(0, 1)
+        flat_focus = focus.flatten(0, 1)
+
+        patches = []
+        for zoom in zooms:
+            patch = self._sample(flat_x, flat_focus, zoom).reshape(b, f, c, out_h, out_w)
+            patches.append(patch)
+
+        # Concatenate on the channel dimension (returns (B, F, C*z, H, W))
+        return torch.cat(patches, dim=2) 
 
 class Sign(nn.Module):
 
