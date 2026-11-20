@@ -11,6 +11,7 @@ Kick-off file for SGF-like training/eval of agent.
 # IMPORTS
 from argparse import ArgumentParser
 from pathlib import Path
+from types import SimpleNamespace
 
 import torch
 from ruamel import yaml
@@ -21,6 +22,7 @@ from modules import environment as e
 from modules import utils
 from modules.actor_critic import ActorCriticPolicy
 from modules.agent import SaccAgent
+from modules.eye import BoundedGaussianPolicy
 from modules.trainer import SaccTrainer
 from modules.wm import SaccWorldModel
 
@@ -41,7 +43,8 @@ def main(game=ROM.Pong_NoFrameskip):
     parser.add_argument("--agent_eval", type=str, default='all', help="Agent model evaluation: 'none', 'all', 'final'")
     parser.add_argument("--amp", default=False, action='store_true', help="Use automatic mixed precision training")
     parser.add_argument("--compile", default=False, action='store_true', help="Whether to use torch.compile")
-    parser.add_argument("--save", default=False, action='store_true', help="Save the model after training.")
+    parser.add_argument("--save", default=False, action='store_true', help="Save the model after training")
+    parser.add_argument("--debug", default=False, action='store_true', help="Debug the model without sending to wandb")
     args = parser.parse_args()
 
     # Load from config file
@@ -62,15 +65,18 @@ def main(game=ROM.Pong_NoFrameskip):
     }
 
     # W&B setup
-    wandb.init(
-        project=args.project, 
-        name=args.name,
-        group=args.group,
-        mode=args.mode, 
-        notes=args.notes, 
-        config=config
-    )
-    config = wandb.config
+    if not config.debug:
+        wandb.init(
+            project=args.project, 
+            name=args.name,
+            group=args.group,
+            mode=args.mode, 
+            notes=args.notes, 
+            config=config
+        )
+        config = wandb.config
+    else:
+        config = SimpleNamespace(**config)
 
     # Device, autocast, compile
     device = torch.device(args.device)
@@ -98,8 +104,14 @@ def main(game=ROM.Pong_NoFrameskip):
         compile_=compile_,
         device=device
     )
+    sacc_policy = BoundedGaussianPolicy(
+        y_dim, 2, -20, 2,
+        compile_=compile_,
+        device=device
+    )
     g_agent = SaccAgent(
         g_policy, 
+        sacc_policy,
         env.action_space, 
         config.action_stack, 
         2,
@@ -142,14 +154,14 @@ def main(game=ROM.Pong_NoFrameskip):
     while not trainer.is_finished():
         metrics = trainer.train()
 
-        if len(metrics) > 0:
+        if len(metrics) > 0 and not config.debug:
             wandb.log(metrics, step=trainer.it)
 
         if trainer.it == 0:
             print("Training...\n")
 
     # Save models if we indicated so
-    if config.save:
+    if config.save and not config.debug:
         torch.save(wm.state_dict(), Path(wandb.run.dir) / 'wm.pt')
         torch.save(g_agent.state_dict(), Path(wandb.run.dir) / 'g_agent.pt')
         wandb.save('wm.pt')

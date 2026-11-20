@@ -231,7 +231,9 @@ class SaccAgent(nn.Module):
         print(f"state: {type(state)}")
         print(f"mask:  {type(cont_mask)}")
         print(f"a:     {type(a)}")
+        print(f"a:     {a.shape}")
         print(f"e:     {type(e)}")
+        print(f"e:     {e.shape}")
         stack = state.action_stack
         # When the stack is None (on init), make a stack of 0s mimicking the datatype of the action chosen.
         # In the case of atari, '0' as a choice means NOOP.
