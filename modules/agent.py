@@ -228,17 +228,19 @@ class SaccAgent(nn.Module):
 
     @torch.no_grad()
     def _advance_state(self, state, cont_mask, a, e):
-        print(f"state: {type(state)}")
-        print(f"mask:  {type(cont_mask)}")
-        print(f"a:     {type(a)}")
-        print(f"a:     {a.shape}")
-        print(f"e:     {type(e)}")
-        print(f"e:     {e.shape}")
+        print(f"state: {state}")
+        print(f"mask:  {cont_mask}")
+        print(f"a:     {a}")
+        print(f"e:     {e}")
+
         stack = state.action_stack
+
+        # Combine the action value and eye values [A, EY, EX] into (B, A')
+        c = torch.cat([a.unsqueeze(1), e], dim=1)
         # When the stack is None (on init), make a stack of 0s mimicking the datatype of the action chosen.
         # In the case of atari, '0' as a choice means NOOP.
         if stack is None:
-            stack = torch.stack(tuple(torch.zeros_like(a) for _ in range(self.act_stack)), 1)
+            stack = torch.stack(tuple(torch.zeros_like(c) for _ in range(self.act_stack)), 1)
 
         # Otherwise, we'll need to shape the mask (init: 1s) to match the size of the stack
         else:
@@ -246,7 +248,7 @@ class SaccAgent(nn.Module):
 
         # Add the newly selected action to the stack of copied actions
         # This applies a shift to the action stack, with the most recent action taken at the end.
-        stack = torch.cat([stack[:, 1:], a.unsqueeze(1)], 1)
+        stack = torch.cat([stack[:, 1:], c.unsqueeze(1)], 1)
         stacked_a = stack
         state = AgentState(stack)
         return state, stacked_a
@@ -267,8 +269,8 @@ class SaccAgent(nn.Module):
             device=cont_mask.device
         )
 
-        next_state, stacked_a, stacked_e = self._advance_state(state, cont_mask, a, e)
-        return a, stacked_a, e, stacked_e, next_state
+        next_state, stacked_a = self._advance_state(state, cont_mask, a, e)
+        return a, stacked_a, next_state
 
     def act(self, state, cont_mask, x, temperature=1):
         # Action decided by the actor-critic policy
@@ -277,8 +279,8 @@ class SaccAgent(nn.Module):
         # Saccade decided by the BoundedGaussianPolicy
         e = self.sacc_policy(x)
 
-        next_state, stacked_a, stacked_e = self._advance_state(state, cont_mask, a, e)
-        return a, stacked_a, e, stacked_e, next_state
+        next_state, stacked_a, = self._advance_state(state, cont_mask, a, e)
+        return a, stacked_a, next_state
 
 class SaccAgentTrainer:
 

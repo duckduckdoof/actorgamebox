@@ -15,9 +15,9 @@ import time
 import torch
 
 from modules import utils
-from modules.agent import AgentTrainer
+from modules.agent import AgentTrainer, SaccAgentTrainer
 from modules.memory import ReplayBuffer, SaccReplayBuffer
-from modules.wm import WorldModelTrainer
+from modules.wm import SaccWorldModelTrainer, WorldModelTrainer
 
 
 # CLASSES
@@ -203,11 +203,11 @@ class SaccTrainer:
         self.replay_buffer = replay_buffer
 
         # WM + Agent Trainers
-        self.wm_trainer = WorldModelTrainer(
+        self.wm_trainer = SaccWorldModelTrainer(
             wm, replay_buffer, **wm_trainer, init_steps=init_steps, eval_mode=wm_eval,
             total_its=env_steps, rng=rng, autocast=autocast, compile_=compile_
         )
-        self.agent_trainer = AgentTrainer(
+        self.agent_trainer = SaccAgentTrainer(
             env_select, game, agent, wm, replay_buffer, **agent_trainer,
             eval_mode=agent_eval, total_its=env_steps, rng=rng, autocast=autocast, compile_=compile_
         )

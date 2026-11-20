@@ -62,10 +62,11 @@ def main(game=ROM.Pong_NoFrameskip):
         'amp': args.amp,
         'compile': args.compile,
         'save': args.save,
+        'debug': args.debug
     }
 
     # W&B setup
-    if not config.debug:
+    if not config['debug']:
         wandb.init(
             project=args.project, 
             name=args.name,
