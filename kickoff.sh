@@ -16,10 +16,11 @@ SEED="${5:-27}"
 nohup python ${SCRIPT}.py \
 	--device cuda:${CUDA} \
 	--game ${GAME}NoFrameskip-v4 \
-	--project sgf-mod-v2 \
+	--project sgf-mod-v3 \
 	--config configs/${CONFIG}.yaml \
 	--amp \
 	--compile \
+	--save \
 	--seed $SEED \
 	--name $GAME.$SEED-$CONFIG \
 	--group $GAME \

@@ -98,10 +98,17 @@ def main(game=ROM.Pong_NoFrameskip):
         compile_=compile_,
         device=device
     )
-    g_agent = Agent(g_policy, env.action_space, config.action_stack)
+    g_agent = Agent(
+        g_policy, 
+        env.action_space, 
+        config.action_stack, 
+        2,
+        config.eye_stack
+    )
     wm = SaccWorldModel(
         env.observation_space, 
         g_agent.stack_act_space, 
+        g_agent.stack_eye_space,
         **config.wm, 
         compile_=compile_, 
         device=device

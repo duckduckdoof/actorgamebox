@@ -10,6 +10,8 @@ World Model description.
 """
 
 # IMPORTS
+import math
+
 import gymnasium as gym
 import numpy as np
 import torch
@@ -357,8 +359,9 @@ class WorldModelTrainer:
 class SaccWorldModel(nn.Module):
     """ World model for the actor, of the environment """
 
-    def __init__(self, obs_space, stack_act_space, y_dim, z_dim, sacc_resolution, sacc_zooms, encoder, projector, predictor,
-                trans_predictor, rew_predictor, term_predictor, contrastive, sim_coef, var_coef, cov_coef,
+    def __init__(self, obs_space, stack_act_space, stack_eye_space, y_dim, z_dim, sacc_resolution, sacc_zooms, 
+                 encoder, projector, predictor, trans_predictor, rew_predictor, term_predictor, 
+                 contrastive, sim_coef, var_coef, cov_coef,
                 rew_coef, term_coef, *, compile_, device=None):
         super().__init__()
 
@@ -372,17 +375,22 @@ class SaccWorldModel(nn.Module):
         self.stack_act_space = stack_act_space
         flat_stack_act_space = gym.spaces.flatten_space(stack_act_space)
 
+        self.stack_eye_space = stack_eye_space
+        self.flat_eye_space = math.prod(stack_eye_space)
+
         num_frames, self.frame_height, self.frame_width, c = obs_space.shape
 
         o_dim = num_frames * c * len(sacc_zooms)
         o_res = sacc_resolution
-        a_dim = flat_stack_act_space.shape[0]
+
+        # This quantity changes with selection of saccade position
+        # The saccade predictor predicts (mean, std) of eye position, so 2 extra dims
+        a_dim = flat_stack_act_space.shape[0] + self.flat_eye_space
 
         self.o_dim = o_dim
         self.y_dim = y_dim
         self.z_dim = z_dim
 
-        # TODO: we need to change the world model off of eye saccades, not just game actions!
         self.encoder = compile_(nn.Sequential(*nets.cnn(o_dim, o_res, y_dim, **encoder, memory_format=torch.channels_last, device=device)))
         self.projector = compile_(nets.VectorMLP(y_dim, z_dim, **projector, device=device))
         self.predictor = compile_(nets.VectorMLP(z_dim + a_dim, z_dim, **predictor, device=device))
@@ -464,18 +472,19 @@ class SaccWorldModel(nn.Module):
         history = []
 
         for t in range(horizon):
-            a, stacked_a, next_agent_state = agent.act(agent_state, cont_mask, y)
+            a, stacked_a, eye, stacked_eye, next_agent_state = agent.act(agent_state, cont_mask, y)
             flat_a = self.flatten_actions(stacked_a, dtype=y.dtype)
-            inp = torch.cat([y, flat_a], -1)
+            flat_eye = self.flatten_actions(stacked_eye, dtype=y.dtype)
+            inp = torch.cat([y, flat_a, flat_eye], -1)
 
             # Skip connection residuals
             next_y = y + self.trans_predictor(inp)
 
-            inp = torch.cat([y, flat_a, next_y], -1)
+            inp = torch.cat([y, flat_a, flat_eye, next_y], -1)
             next_r = self.rew_predictor(inp)
             next_term = self.term_predictor(inp)
 
-            history.append([y, a, stacked_a, next_y, next_r, next_term])
+            history.append([y, a, stacked_a, eye, stacked_eye, next_y, next_r, next_term])
 
             next_cont_mask = utils.get_mask(1 - next_term.float())
             y = next_cont_mask.apply(next_y)
@@ -486,7 +495,7 @@ class SaccWorldModel(nn.Module):
 
     # By this time, we have preprocessed observations from B, F, C, H, W to
     # B, F * C, H, W
-    def representation_loss(self, ot, next_ot, flat_a, next_r, next_term):
+    def representation_loss(self, ot, next_ot, flat_a, flat_eye, next_r, next_term):
         """ Loss in the predicted representation of the WM. """
 
         assert self.training
@@ -504,11 +513,11 @@ class SaccWorldModel(nn.Module):
         cov_loss = (cov_loss1 + cov_loss2) / 2
 
         # Similarity between predicted z and actual z
-        inp = torch.cat([z, flat_a], -1)
+        inp = torch.cat([z, flat_a, flat_eye], -1)
         pred_z = self.predictor(inp)
         sim_loss = self.predictor.loss(pred_z, next_z)
 
-        inp = torch.cat([yt, flat_a, next_yt], -1)
+        inp = torch.cat([yt, flat_a, flat_eye, next_yt], -1)
         reward_stats = self.rew_predictor.get_stats(inp, full_precision=True)
         reward_loss = self.rew_predictor.loss(reward_stats, next_r)
         term_stats = self.term_predictor.get_stats(inp, full_precision=True)
