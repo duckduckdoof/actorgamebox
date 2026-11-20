@@ -16,7 +16,7 @@ import torch
 from ruamel import yaml
 
 import wandb
-from modules import envs, utils
+from modules import environment, utils
 from modules.actor_critic import ActorCriticPolicy
 from modules.agent import Agent
 from modules.trainer import Trainer
@@ -79,7 +79,7 @@ def main():
     seed = (config.seed + 42) * 27
     rng = utils.seed_all(seed)
 
-    env_selection = envs.atari_env
+    env_selection = environment.atari_env
     env = env_selection(config.game, make=True, **config.env)
 
     y_dim = config.wm['y_dim']
