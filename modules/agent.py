@@ -249,9 +249,9 @@ class SaccAgent(nn.Module):
         # Add the newly selected action to the stack of copied actions
         # This applies a shift to the action stack, with the most recent action taken at the end.
         stack = torch.cat([stack[:, 1:], c.unsqueeze(1)], 1)
-        stacked_a = stack
+        stacked_a_e = stack
         state = AgentState(stack)
-        return state, stacked_a
+        return state, stacked_a_e
 
     def act_random(self, state, cont_mask, rng):
         batch_size = cont_mask.shape[0]
@@ -269,8 +269,8 @@ class SaccAgent(nn.Module):
             device=cont_mask.device
         )
 
-        next_state, stacked_a = self._advance_state(state, cont_mask, a, e)
-        return a, stacked_a, next_state
+        next_state, stacked_a_e = self._advance_state(state, cont_mask, a, e)
+        return a, stacked_a_e, next_state
 
     def act(self, state, cont_mask, x, temperature=1):
         # Action decided by the actor-critic policy
@@ -279,8 +279,8 @@ class SaccAgent(nn.Module):
         # Saccade decided by the BoundedGaussianPolicy
         e = self.sacc_policy(x)
 
-        next_state, stacked_a, = self._advance_state(state, cont_mask, a, e)
-        return a, stacked_a, next_state
+        next_state, stacked_a_e, = self._advance_state(state, cont_mask, a, e)
+        return a, stacked_a_e, next_state
 
 class SaccAgentTrainer:
 

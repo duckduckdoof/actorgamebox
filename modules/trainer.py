@@ -229,8 +229,8 @@ class SaccTrainer:
             self.agent_state = agent.start()
             self.cont_mask = utils.get_mask(torch.ones(1, dtype=torch.bool, device=replay_buffer.device))
             for _ in range(init_steps):
-                a, stacked_a, self.agent_state = agent.act_random(self.agent_state, self.cont_mask, self.rng)
-                self._env_step(a, stacked_a)
+                a, stacked_a_e, self.agent_state = agent.act_random(self.agent_state, self.cont_mask, self.rng)
+                self._env_step(a, stacked_a_e)
 
     def close(self):
         self.agent_trainer.close()
@@ -238,13 +238,20 @@ class SaccTrainer:
     def is_finished(self):
         return self.it >= (self.env_steps - self.init_steps - 1)
 
-    def _env_step(self, a, stacked_a, eye, stacked_eye):
+    def _env_step(self, a, stacked_a_e):
+        # Remember that the action 'stack' combines the game + eye actions.
+        # ex: [[[A1, eY, eX], [A2, eY, eX]]]
         env = self.env
         next_o, next_r, next_term, next_trunc, _ = env.step(a.cpu().item())
         cont_o = next_o
         if next_term or next_trunc:
             cont_o, _ = env.reset(seed=self.seed)
             cont_eye = (0, 0)
+
+        # Stacked eye movements are on [-1, 1]; they need to be unnormalized back into
+        # pixel coordinates on the screen.
+        print(f"stacked a+e: {stacked_a_e.shape}")
+        print(f"stacked a+e [0]: {stacked_a_e[0]}")
         next_r, next_term, next_trunc, next_o = self.replay_buffer.step(
             stacked_a, next_o, stacked_eye, next_r, next_term, next_trunc, cont_o, cont_eye
         )
@@ -263,12 +270,12 @@ class SaccTrainer:
             o = self.replay_buffer.cont_o
             y = wm.encode(o)
             if self.rng.random() < self.env_eps:
-                a, stacked_a, self.agent_state = agent.act_random(self.agent_state, self.cont_mask, self.rng)
+                a, stacked_a_e, self.agent_state = agent.act_random(self.agent_state, self.cont_mask, self.rng)
             else:
-                a, stacked_a, self.agent_state = agent.act(self.agent_state, self.cont_mask, y, temperature=self.env_temp)
+                a, stacked_a_e, self.agent_state = agent.act(self.agent_state, self.cont_mask, y, temperature=self.env_temp)
 
         # Take one env step
-        self._env_step(a, stacked_a)
+        self._env_step(a, stacked_a_e)
 
         # Train the WM by one step
         start_time = time.time()

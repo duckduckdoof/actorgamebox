@@ -472,8 +472,8 @@ class SaccWorldModel(nn.Module):
         history = []
 
         for t in range(horizon):
-            a, stacked_a, next_agent_state = agent.act(agent_state, cont_mask, y)
-            flat_a = self.flatten_actions(stacked_a, dtype=y.dtype)
+            a, stacked_a_e, next_agent_state = agent.act(agent_state, cont_mask, y)
+            flat_a = self.flatten_actions(stacked_a_e, dtype=y.dtype)
             inp = torch.cat([y, flat_a], -1)
 
             # Skip connection residuals
@@ -483,7 +483,7 @@ class SaccWorldModel(nn.Module):
             next_r = self.rew_predictor(inp)
             next_term = self.term_predictor(inp)
 
-            history.append([y, a, stacked_a, next_y, next_r, next_term])
+            history.append([y, a, stacked_a_e, next_y, next_r, next_term])
 
             next_cont_mask = utils.get_mask(1 - next_term.float())
             y = next_cont_mask.apply(next_y)
