@@ -212,8 +212,8 @@ class SaccAgent(nn.Module):
         super().__init__()
         self.policy = act_policy
         self.single_act_space = single_action_space
-        self.stack_act_space = gym.vector.utils.batch_space(single_action_space, action_stack)
         self.act_stack = action_stack
+        self.stack_act_space = gym.vector.utils.batch_space(single_action_space, action_stack)
 
         self.sacc_policy = sacc_policy
         self.eye_space = eye_space

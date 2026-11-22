@@ -373,10 +373,12 @@ class SaccWorldModel(nn.Module):
 
         self.obs_space = obs_space
         self.stack_act_space = stack_act_space
+        # Note this doesn't cover batch dimensions.
         flat_stack_act_space = gym.spaces.flatten_space(stack_act_space)
 
         self.stack_eye_space = stack_eye_space
-        self.flat_eye_space = math.prod(stack_eye_space)
+        # Note this doesn't cover batch dimensions.
+        flat_eye_space = math.prod(stack_eye_space)
 
         num_frames, self.frame_height, self.frame_width, c = obs_space.shape
 
@@ -385,7 +387,7 @@ class SaccWorldModel(nn.Module):
 
         # This quantity changes with selection of saccade position
         # The saccade predictor predicts (mean, std) of eye position, so 2 extra dims
-        a_dim = flat_stack_act_space.shape[0] + self.flat_eye_space
+        a_dim = flat_stack_act_space.shape[0] + flat_eye_space
 
         self.o_dim = o_dim
         self.y_dim = y_dim
