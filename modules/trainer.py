@@ -195,6 +195,7 @@ class SaccTrainer:
         replay_buffer = SaccReplayBuffer(
             env.observation_space,
             agent.stack_act_space,
+            agent.stack_eye_space,
             env_steps,
             start_o,
             start_eye,
@@ -246,14 +247,14 @@ class SaccTrainer:
         cont_o = next_o
         if next_term or next_trunc:
             cont_o, _ = env.reset(seed=self.seed)
-            cont_eye = (0, 0)
 
         # Stacked eye movements are on [-1, 1]; they need to be unnormalized back into
         # pixel coordinates on the screen.
-        print(f"stacked a+e: {stacked_a_e.shape}")
-        print(f"stacked a+e [0]: {stacked_a_e[0]}")
+        # Remember that the combined stack of game actions + eye positions are float32
+        stacked_a, stacked_eye = torch.split(stacked_a_e, [1, 2], dim=2)
+        stacked_a = stacked_a.squeeze(2).long()
         next_r, next_term, next_trunc, next_o = self.replay_buffer.step(
-            stacked_a, next_o, stacked_eye, next_r, next_term, next_trunc, cont_o, cont_eye
+            stacked_a, next_o, next_r, next_term, next_trunc, cont_o
         )
         self.cont_mask = utils.get_mask(~(next_term | next_trunc))
 
@@ -268,6 +269,8 @@ class SaccTrainer:
         wm.eval()
         with self.autocast(), torch.no_grad():
             o = self.replay_buffer.cont_o
+
+            # TODO: encode now needs an eye position, which we can get from the RB
             y = wm.encode(o)
             if self.rng.random() < self.env_eps:
                 a, stacked_a_e, self.agent_state = agent.act_random(self.agent_state, self.cont_mask, self.rng)

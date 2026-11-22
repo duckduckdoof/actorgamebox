@@ -228,15 +228,11 @@ class SaccAgent(nn.Module):
 
     @torch.no_grad()
     def _advance_state(self, state, cont_mask, a, e):
-        print(f"state: {state}")
-        print(f"mask:  {cont_mask}")
-        print(f"a:     {a}")
-        print(f"e:     {e}")
-
         stack = state.action_stack
 
         # Combine the action value and eye values [A, EY, EX] into (B, A')
-        c = torch.cat([a.unsqueeze(1), e], dim=1)
+        a_f = a.float()
+        c = torch.cat([a_f.unsqueeze(1), e], dim=1)
         # When the stack is None (on init), make a stack of 0s mimicking the datatype of the action chosen.
         # In the case of atari, '0' as a choice means NOOP.
         if stack is None:
@@ -264,8 +260,8 @@ class SaccAgent(nn.Module):
 
         # Make 2d-vector choice on interval [-1, 1], batch_size times
         e = torch.as_tensor(
-            rng.uniform(-1, 1, size=(batch_size, 2)),
-            dtype=torch.long,
+            rng.uniform(-1, 1, size=(batch_size, self.eye_space)),
+            dtype=torch.float32,
             device=cont_mask.device
         )
 

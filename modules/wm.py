@@ -473,6 +473,8 @@ class SaccWorldModel(nn.Module):
 
         for t in range(horizon):
             a, stacked_a_e, next_agent_state = agent.act(agent_state, cont_mask, y)
+            print(f"stacked: {stacked_a_e}")
+            print(f"stacked: {stacked_a_e.dtype}")
             flat_a = self.flatten_actions(stacked_a_e, dtype=y.dtype)
             inp = torch.cat([y, flat_a], -1)
 
