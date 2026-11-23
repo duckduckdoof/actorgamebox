@@ -228,26 +228,24 @@ class SaccAgent(nn.Module):
 
     @torch.no_grad()
     def _advance_state(self, state, cont_mask, a, e):
-        stack = state.action_stack
-
-        # Combine the action value and eye values [A, EY, EX] into (B, A')
-        a_f = a.float()
-        c = torch.cat([a_f.unsqueeze(1), e], dim=1)
-        # When the stack is None (on init), make a stack of 0s mimicking the datatype of the action chosen.
-        # In the case of atari, '0' as a choice means NOOP.
-        if stack is None:
-            stack = torch.stack(tuple(torch.zeros_like(c) for _ in range(self.act_stack)), 1)
-
-        # Otherwise, we'll need to shape the mask (init: 1s) to match the size of the stack
+        a_stack, e_stack = state.action_stack
+        if a_stack is None:
+            a_stack = torch.stack(tuple(torch.zeros_like(a) for _ in range(self.act_stack)), 1)
         else:
-            stack = cont_mask.apply(stack)
+            a_stack = cont_mask.apply(a_stack)
+        if e_stack is None:
+            e_stack = torch.stack(tuple(torch.zeros_like(e) for _ in range(self.eye_stack)), 1)
+        else:
+            e_stack = cont_mask.apply(e_stack)
 
         # Add the newly selected action to the stack of copied actions
         # This applies a shift to the action stack, with the most recent action taken at the end.
-        stack = torch.cat([stack[:, 1:], c.unsqueeze(1)], 1)
-        stacked_a_e = stack
-        state = AgentState(stack)
-        return state, stacked_a_e
+        a_stack = torch.cat([a_stack[:, 1:], a], 1)
+        stacked_a = a_stack
+        e_stack = torch.cat([a_stack[:, 1:], e], 1)
+        stacked_e = e_stack
+        state = AgentState((a_stack, e_stack))
+        return state, stacked_a, stacked_e
 
     def act_random(self, state, cont_mask, rng):
         batch_size = cont_mask.shape[0]
@@ -265,8 +263,8 @@ class SaccAgent(nn.Module):
             device=cont_mask.device
         )
 
-        next_state, stacked_a_e = self._advance_state(state, cont_mask, a, e)
-        return a, stacked_a_e, next_state
+        next_state, stacked_a, stacked_e = self._advance_state(state, cont_mask, a, e)
+        return a, stacked_a, stacked_e, next_state
 
     def act(self, state, cont_mask, x, temperature=1):
         # Action decided by the actor-critic policy
@@ -275,8 +273,8 @@ class SaccAgent(nn.Module):
         # Saccade decided by the BoundedGaussianPolicy
         e = self.sacc_policy(x)
 
-        next_state, stacked_a_e, = self._advance_state(state, cont_mask, a, e)
-        return a, stacked_a_e, next_state
+        next_state, stacked_a, stacked_e, = self._advance_state(state, cont_mask, a, e)
+        return a, stacked_a, stacked_e, next_state
 
 class SaccAgentTrainer:
 
@@ -324,14 +322,14 @@ class SaccAgentTrainer:
         with self.autocast(), torch.no_grad():
             if start_y is None:
                 idx = buffer.sample_idx(batch_size, self.rng)
-                o = buffer.get(idx, 'next_o')[0]
-                start_y = wm.encode(o)
+                o, e = buffer.get(idx, 'e', 'next_o')[0]
+                start_y = wm.encode(o, e)
             elif start_y.shape[0] >= batch_size:
                 start_y = start_y[:batch_size]
             else:
                 idx = buffer.sample_idx(batch_size - start_y.shape[0], self.rng)
-                remaining_o = buffer.get(idx, 'next_o')[0]
-                remaining_y = wm.encode(remaining_o)
+                remaining_o, remaining_e = buffer.get(idx, 'e', 'next_o')[0]
+                remaining_y = wm.encode(remaining_o, remaining_e)
                 start_y = torch.cat([start_y, remaining_y], 0)
 
             ys, as_, _, next_ys, next_rs, next_terms = wm.imagine(agent, self.horizon, start_y)
@@ -375,11 +373,12 @@ class SaccAgentTrainer:
                 y = wm.encode(o)
                 cont_mask = utils.get_mask(torch.ones(n, dtype=torch.bool, device=device))
                 if rng.random() < self.eval_eps:
-                    a, _, state = agent.act_randomly(state, cont_mask, rng)
+                    a, e, _, state = agent.act_randomly(state, cont_mask, rng)
                 else:
-                    a, _, state = agent.act(state, cont_mask, y, temperature=self.eval_temp)
+                    a, e, _, state = agent.act(state, cont_mask, y, temperature=self.eval_temp)
                 a_cpu = a.cpu().numpy()
-                return a_cpu, state
+                e_cpu = e.cpu().numpy()
+                return a_cpu, e_cpu, state
 
         stats = self.eval_collector.collect_episode_stats(seed, num_eps, policy)
 

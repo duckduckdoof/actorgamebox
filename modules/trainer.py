@@ -191,14 +191,12 @@ class SaccTrainer:
 
         # Init replay buffer, center gaze
         start_o, _ = env.reset(seed=seed)
-        start_eye = (0, 0)
         replay_buffer = SaccReplayBuffer(
             env.observation_space,
             agent.stack_act_space,
             agent.stack_eye_space,
             env_steps,
             start_o,
-            start_eye,
             device=buffer_device
         )
         self.replay_buffer = replay_buffer
@@ -230,8 +228,8 @@ class SaccTrainer:
             self.agent_state = agent.start()
             self.cont_mask = utils.get_mask(torch.ones(1, dtype=torch.bool, device=replay_buffer.device))
             for _ in range(init_steps):
-                a, stacked_a_e, self.agent_state = agent.act_random(self.agent_state, self.cont_mask, self.rng)
-                self._env_step(a, stacked_a_e)
+                a, stacked_a, stacked_e, self.agent_state = agent.act_random(self.agent_state, self.cont_mask, self.rng)
+                self._env_step(a, stacked_a, stacked_e)
 
     def close(self):
         self.agent_trainer.close()
@@ -239,22 +237,19 @@ class SaccTrainer:
     def is_finished(self):
         return self.it >= (self.env_steps - self.init_steps - 1)
 
-    def _env_step(self, a, stacked_a_e):
-        # Remember that the action 'stack' combines the game + eye actions.
-        # ex: [[[A1, eY, eX], [A2, eY, eX]]]
+    def _env_step(self, a, stacked_a, stacked_e):
         env = self.env
         next_o, next_r, next_term, next_trunc, _ = env.step(a.cpu().item())
         cont_o = next_o
         if next_term or next_trunc:
             cont_o, _ = env.reset(seed=self.seed)
 
-        # Stacked eye movements are on [-1, 1]; they need to be unnormalized back into
-        # pixel coordinates on the screen.
-        # Remember that the combined stack of game actions + eye positions are float32
-        stacked_a, stacked_eye = torch.split(stacked_a_e, [1, 2], dim=2)
-        stacked_a = stacked_a.squeeze(2).long()
+        # Before writing the stack of eye saccades, we need to convert them back to screen coords
+        print(f"[DEBUG] normed coords: {stacked_e}")
+        stacked_e = utils.unnorm_coords(stacked_e, self.wm.frame_height, self.wm.frame_width)
+        print(f"[DEBUG] unnormed coords: {stacked_e}")
         next_r, next_term, next_trunc, next_o = self.replay_buffer.step(
-            stacked_a, next_o, next_r, next_term, next_trunc, cont_o
+            stacked_a, stacked_e, next_o, next_r, next_term, next_trunc, cont_o
         )
         self.cont_mask = utils.get_mask(~(next_term | next_trunc))
 
@@ -268,17 +263,16 @@ class SaccTrainer:
         agent.eval()
         wm.eval()
         with self.autocast(), torch.no_grad():
-            o = self.replay_buffer.cont_o
-
-            # TODO: encode now needs an eye position, which we can get from the RB
-            y = wm.encode(o)
+            o = replay_buffer.cont_o
+            prev_e = replay_buffer.prev_e
+            y = wm.encode(o, prev_e)
             if self.rng.random() < self.env_eps:
-                a, stacked_a_e, self.agent_state = agent.act_random(self.agent_state, self.cont_mask, self.rng)
+                a, stacked_a, stacked_e, self.agent_state = agent.act_random(self.agent_state, self.cont_mask, self.rng)
             else:
-                a, stacked_a_e, self.agent_state = agent.act(self.agent_state, self.cont_mask, y, temperature=self.env_temp)
+                a, stacked_a, stacked_e, self.agent_state = agent.act(self.agent_state, self.cont_mask, y, temperature=self.env_temp)
 
         # Take one env step
-        self._env_step(a, stacked_a_e)
+        self._env_step(a, stacked_a, stacked_e)
 
         # Train the WM by one step
         start_time = time.time()

@@ -575,7 +575,8 @@ class EpisodeCollector:
             agg = reset_fn(cont, o)
             state = None
             while np.any(cont):
-                cont_a, state = policy_fn(o[cont], state, just_done)
+                # TODO: we might need to count the eye saccade as a stat.
+                cont_a, _, state = policy_fn(o[cont], state, just_done)
 
                 # We assume '0' is noop for actions
                 a.fill(0)

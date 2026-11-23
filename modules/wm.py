@@ -474,20 +474,19 @@ class SaccWorldModel(nn.Module):
         history = []
 
         for t in range(horizon):
-            a, stacked_a_e, next_agent_state = agent.act(agent_state, cont_mask, y)
-            print(f"stacked: {stacked_a_e}")
-            print(f"stacked: {stacked_a_e.dtype}")
-            flat_a = self.flatten_actions(stacked_a_e, dtype=y.dtype)
-            inp = torch.cat([y, flat_a], -1)
+            a, stacked_a, stacked_e, next_agent_state = agent.act(agent_state, cont_mask, y)
+            flat_a = self.flatten_actions(stacked_a, dtype=y.dtype)
+            flat_e = utils.flatten_structure(stacked_e)
+            inp = torch.cat([y, flat_a, flat_e], -1)
 
             # Skip connection residuals
             next_y = y + self.trans_predictor(inp)
 
-            inp = torch.cat([y, flat_a, next_y], -1)
+            inp = torch.cat([y, flat_a, flat_e, next_y], -1)
             next_r = self.rew_predictor(inp)
             next_term = self.term_predictor(inp)
 
-            history.append([y, a, stacked_a_e, next_y, next_r, next_term])
+            history.append([y, a, stacked_a, stacked_e, next_y, next_r, next_term])
 
             next_cont_mask = utils.get_mask(1 - next_term.float())
             y = next_cont_mask.apply(next_y)
@@ -498,7 +497,7 @@ class SaccWorldModel(nn.Module):
 
     # By this time, we have preprocessed observations from B, F, C, H, W to
     # B, F * C, H, W
-    def representation_loss(self, ot, next_ot, flat_a, next_r, next_term):
+    def representation_loss(self, ot, next_ot, flat_a, flat_e, next_r, next_term):
         """ Loss in the predicted representation of the WM. """
 
         assert self.training
@@ -516,11 +515,11 @@ class SaccWorldModel(nn.Module):
         cov_loss = (cov_loss1 + cov_loss2) / 2
 
         # Similarity between predicted z and actual z
-        inp = torch.cat([z, flat_a], -1)
+        inp = torch.cat([z, flat_a, flat_e], -1)
         pred_z = self.predictor(inp)
         sim_loss = self.predictor.loss(pred_z, next_z)
 
-        inp = torch.cat([yt, flat_a, next_yt], -1)
+        inp = torch.cat([yt, flat_a, flat_e, next_yt], -1)
         reward_stats = self.rew_predictor.get_stats(inp, full_precision=True)
         reward_loss = self.rew_predictor.loss(reward_stats, next_r)
         term_stats = self.term_predictor.get_stats(inp, full_precision=True)
@@ -547,9 +546,9 @@ class SaccWorldModel(nn.Module):
         }
         return repr_loss, metrics, yt, next_yt
 
-    def transition_loss(self, y, flat_a, next_y):
+    def transition_loss(self, y, flat_a, flat_e, next_y):
         """ Transition loss for model """
-        inp = torch.cat([y, flat_a], -1)
+        inp = torch.cat([y, flat_a, flat_e], -1)
 
         # Another skip connection residual
         pred_y = y + self.trans_predictor(inp)
@@ -601,7 +600,9 @@ class SaccWorldModelTrainer:
         self._optimize_decoder = compile_(self._optimize_decoder)
 
     # Remember that we have B, F, C, H, W for our observation.
-    def _optimize(self, o, stacked_eye, stacked_a, next_r, next_term, next_o, stacked_next_eye, it):
+    # This is tricky, since for the current frame, we need the PREVIOUS eye action.
+    #   The 'current' selected eye action is for the next observation.
+    def _optimize(self, o, stacked_a, stacked_e, next_r, next_term, next_o, stacked_prev_e, it):
         wm = self.wm
 
         autocast = self.autocast()
@@ -609,16 +610,17 @@ class SaccWorldModelTrainer:
             with torch.no_grad():
                 dtype = torch.half if autocast._enabled else torch.float
 
-                o = wm.preprocess(o, stacked_eye, dtype=dtype)
-                next_o = wm.preprocess(next_o, stacked_next_eye, dtype=dtype)
+                o = wm.preprocess(o, stacked_prev_e, dtype=dtype)
+                next_o = wm.preprocess(next_o, stacked_e, dtype=dtype)
 
                 ot = self.augmentation(o)
                 next_ot = self.augmentation(next_o)
 
                 # Actions are two-D in the stack (B, Act_stack) (ex: [[0, 0, 3, 4]])
                 flat_a = wm.flatten_actions(stacked_a, dtype=dtype)
+                flat_e = utils.flatten_structure(stacked_e)
 
-            repr_loss, repr_loss_metrics, yt, next_yt = wm.representation_loss(ot, next_ot, flat_a, next_r, next_term)
+            repr_loss, repr_loss_metrics, yt, next_yt = wm.representation_loss(ot, next_ot, flat_a, flat_e, next_r, next_term)
 
         # Representation loss
         with self.autocast():
@@ -653,11 +655,11 @@ class SaccWorldModelTrainer:
     def train(self, it):
         """ Train for a single iteration of the world model. """
         idx = self.replay_buffer.sample_idx(self.batch_size, self.rng)
-        o, stacked_eye, stacked_a, next_r, next_term, next_o, stacked_next_eye = \
-            self.replay_buffer.get(idx, 'o', 'eye', 'a', 'next_r', 'next_term', 'next_o', 'next_eye')
+        o, stacked_eye, stacked_a, next_r, next_term, next_o, stacked_prev_eye = \
+            self.replay_buffer.get(idx, 'o', 'eye', 'a', 'next_r', 'next_term', 'next_o', 'prev_eye')
 
         self.wm.train()
-        metrics, y = self._optimize(o, stacked_eye, stacked_a, next_r, next_term, next_o, stacked_next_eye, it)
+        metrics, y = self._optimize(o, stacked_a, stacked_eye, next_r, next_term, next_o, stacked_prev_eye, it)
 
         if self.eval_mode == 'decoder':
             self.decoder.train()
