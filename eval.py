@@ -15,9 +15,13 @@ from argparse import ArgumentParser
 from pathlib import Path
 from types import SimpleNamespace
 
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from ruamel import yaml
+from torchvision.utils import make_grid
 
+from configs.constants import LUMA_VALS
 from configs.globals import ROM
 from modules import environment as e
 from modules import utils
@@ -27,6 +31,80 @@ from modules.wm import WorldModel
 
 
 # MAIN
+def rgb_to_gray_3ch(frames: np.ndarray) -> np.ndarray:
+    """Converts an RGB uint8 array to 3-channel grayscale."""
+    weights = np.array(LUMA_VALS)
+    gray = np.sum(frames * weights, axis=-1, keepdims=True)
+    gray_3ch = np.repeat(gray, 3, axis=-1)
+    return gray_3ch.astype(frames.dtype)
+
+def paint_square(
+        frame: np.ndarray, 
+        center: np.ndarray, 
+        rgb: np.ndarray, 
+        r: np.ndarray,
+        hollow: bool = False
+    ) -> None:
+    """Paints a square dot centered at (y, x) in-place, clipped to frame boundaries."""
+    h, w = frame.shape[:2]
+    y, x = center[0], center[1]
+    ry, rx = r[0], r[1]
+
+    y_top = y - ry
+    y_bot = y + ry
+    x_left = x - rx
+    x_right = x + rx
+
+    y_min = max(0, y_top)
+    y_max = min(h, y_bot + 1)
+    x_min = max(0, x_left)
+    x_max = min(w, x_right + 1)
+
+    # Draw filled/empty box
+    if not hollow:
+        frame[y_min:y_max, x_min:x_max] = rgb
+    else:
+        # Stop if the box is completely outside the frame
+        if x_min >= x_max or y_min >= y_max:
+            return
+
+        # Paint each edge only if that edge lies inside the frame
+        if 0 <= y_top < h:
+            frame[y_top, x_min:x_max] = rgb
+        if 0 <= y_bot < h:
+            frame[y_bot, x_min:x_max] = rgb
+        if 0 <= x_left < w:
+            frame[y_min:y_max, x_left] = rgb
+        if 0 <= x_right < w:
+            frame[y_min:y_max, x_right] = rgb
+
+def viz_frames_eval(frame_data: dict, num_recons: int, patch_width: int, patch_height: int, rng):
+    """ Given frame data from running the eye wrapper, collect recons. """
+    num_frames = len(frame_data['frames'])
+    frames_idx = rng.choice(num_frames - num_recons)
+    recons_start, recons_end = frames_idx, frames_idx + num_recons
+
+    print(f"Number of recons: {num_recons}")
+    print(f"Number of frames: {num_frames}")
+    print(f"Selected range: {(recons_start, recons_end)}")
+    recons_frames = frame_data['frames'][recons_start: recons_end]
+    recons_frames = [rgb_to_gray_3ch(r.copy()) for r in recons_frames]
+    patches = frame_data['patch_pos'][recons_start: recons_end]
+
+    for recon, patch in zip(recons_frames, patches):
+        yellow = np.array([255, 255, 0])
+        r = np.array([2,2])
+        h, w = patch_height, patch_width
+        paint_square(recon, patch, yellow, r)
+        paint_square(recon, patch, yellow, np.array([h, w]), hollow=True)
+
+    frames_tensor = torch.from_numpy(np.stack(recons_frames)).permute(0, 3, 1, 2)
+
+    grid_tensor = make_grid(frames_tensor, nrow=4, padding=2)
+    grid_image = grid_tensor.permute(1, 2, 0).numpy()
+
+    return grid_image
+
 def main(game=ROM.Pong_NoFrameskip):
     parser = ArgumentParser()
     parser.add_argument("--device", type=str, required=True, help='Device used for training')
@@ -36,6 +114,7 @@ def main(game=ROM.Pong_NoFrameskip):
     parser.add_argument("--compile", default=False, action='store_true', help="Whether to use torch.compile")
     parser.add_argument("--dir", type=str, default="models/pong/base/", help="Base dir for models.")
     parser.add_argument("--num", type=int, default=1, help="Default number of episodes.")
+    parser.add_argument("--recons", type=int, default=8, help="Default number of episodes.")
     args = parser.parse_args()
 
     # Load from config file
@@ -50,7 +129,8 @@ def main(game=ROM.Pong_NoFrameskip):
         'seed': args.seed,
         'compile': args.compile,
         'dir': args.dir,
-        'num': args.num
+        'num': args.num,
+        'recons': args.recons
     }
     config = SimpleNamespace(**config)
     # print(f"Config: {config}")
@@ -61,7 +141,7 @@ def main(game=ROM.Pong_NoFrameskip):
 
     # Env, policy, agent, wm
     seed = (config.seed + 42) * 27
-    utils.seed_all(seed)
+    rng = utils.seed_all(seed)
     
     # Create eye-sacchade game wrapper env
     print("Creating env...")
@@ -110,7 +190,7 @@ def main(game=ROM.Pong_NoFrameskip):
     }
     agent.load_state_dict(clean_ag_checkpoint, strict=True)
 
-    print("Putting into eval mode and running...")
+    print("Putting into eval mode and running...\n")
 
     wm.eval()
     agent.eval()
@@ -142,10 +222,27 @@ def main(game=ROM.Pong_NoFrameskip):
 
             print(f"Episode {i} final reward: {rew}")
             stats.append({
-                "itr": i,
+                "episode": i,
                 "total reward": rew
             })
-            frame_data.append(data)
+
+            frame_data.append({
+                "episode": i,
+                "frames": [item['frame'] for item in data],
+                "patch_pos": [item['patch_pos'] for item in data],
+            })
+
+    print(stats)
+
+    print("Sampled Frame Visualization: \n")
+    h, w = config.env['patch_size'], config.env['patch_size']
+    grid = viz_frames_eval(frame_data[0], config.recons, h, w, rng)
+
+    plt.figure(figsize=(8, 9))
+    plt.imshow(grid)
+    plt.axis("off")
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
     main()
