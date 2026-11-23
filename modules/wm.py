@@ -42,7 +42,7 @@ class WorldModel(nn.Module):
         self.stack_act_space = stack_act_space
         flat_stack_act_space = gym.spaces.flatten_space(stack_act_space)
 
-        num_frames, h, w, c = obs_space.shape
+        num_frames, h, _, c = obs_space.shape
         o_dim = num_frames * c
         o_res = h
         a_dim = flat_stack_act_space.shape[0]
