@@ -103,6 +103,16 @@ policy:
     low: -20
     high: 20
 
+  eye:
+    out_dim: 2
+    log_std_min: -20
+    log_std_max: 2
+    dims: 512-512
+    norm: layer
+    act: silu
+    init: truncated_normal
+    out_init: zeros
+
 trainer:
   env_steps: 50000
   init_steps: 5000

@@ -106,7 +106,8 @@ def main(game=ROM.Pong_NoFrameskip):
         device=device
     )
     sacc_policy = BoundedGaussianPolicy(
-        y_dim, 2, -20, 2,
+        y_dim, 
+        **config.policy['eye'],
         compile_=compile_,
         device=device
     )
