@@ -182,7 +182,7 @@ class AgentTrainer:
                 else:
                     a, _, state = agent.act(state, cont_mask, y, temperature=self.eval_temp)
                 a_cpu = a.cpu().numpy()
-                return a_cpu, state
+                return a_cpu, None, state
 
         stats = self.eval_collector.collect_episode_stats(seed, num_eps, policy)
 
