@@ -144,7 +144,7 @@ def main(game=ROM.Pong_NoFrameskip):
     parser.add_argument("--seed", type=int, default=1, help="Random seed for reproducibility")
     parser.add_argument("--config", type=str, required=True, help="Config file path")
     parser.add_argument("--compile", default=False, action='store_true', help="Whether to use torch.compile")
-    parser.add_argument("--dir", type=str, default="models/pong/base/", help="Base dir for models.")
+    parser.add_argument("--dir", type=str, default="models/pong/sacc/", help="Base dir for models.")
     parser.add_argument("--num", type=int, default=1, help="Default number of episodes.")
     parser.add_argument("--recons", type=int, default=8, help="Default number of episodes.")
     parser.add_argument("--no_viz", default=True, action='store_false', help="Flag for disabling visualizing sampled frames.")
