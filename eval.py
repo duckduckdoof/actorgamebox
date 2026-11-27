@@ -83,22 +83,26 @@ def paint_square(
         if 0 <= x_right < w:
             frame[y_min:y_max, x_right] = rgb
 
-def paint_frames(frames: list, patches: list, height: int, width: int, color: np.ndarray = DEFAULT_PATCH_COLOR):
+def paint_frames(frames: list, patches: list, res: list, height: int, width: int, color: np.ndarray = DEFAULT_PATCH_COLOR):
     # Paint the focus on each frame
     for recon, patch in zip(frames, patches):
+        # Paint center "focus"
         r = np.array([2,2])
-        h, w = height, width
         paint_square(recon, patch, color, r)
-        paint_square(recon, patch, color, np.array([h, w]), hollow=True)
 
-def viz_frames_video(frame_data: dict, patch_height: int, patch_width: int, src_dir: str, dest_dir: str):
+        # Paint multi-resolution, if applicable
+        for resolution in res:
+            h, w = height * resolution, width * resolution
+            paint_square(recon, patch, color, np.array([h, w]), hollow=True)
+
+def viz_frames_video(frame_data: dict, res: list, patch_height: int, patch_width: int, src_dir: str, dest_dir: str):
     """ Given frame data, compile into video with painted focus """
 
     # Paint the focus points on the frame
     frames = [rgb_to_gray_3ch(f) for f in frame_data['frames']]
     patches = frame_data['patch_pos']
     assert len(frames) == len(patches)
-    paint_frames(frames, patches, patch_height, patch_width)
+    paint_frames(frames, patches, res, patch_height, patch_width)
 
     # Save the frames as mp4 file.
     src = src_dir.replace("/", ".")
@@ -111,7 +115,7 @@ def viz_frames_video(frame_data: dict, patch_height: int, patch_width: int, src_
 
     print(f"Wrote {len(frames)} frames to {dest}...")
 
-def viz_frames_eval_sample(frame_data: dict, num_recons: int, patch_width: int, patch_height: int, rng):
+def viz_frames_eval_sample(frame_data: dict, num_recons: int, res: list, patch_width: int, patch_height: int, rng):
     """ Given frame data from running the eye wrapper, collect recons. """
 
     # Sample random sequence of frames.
@@ -128,7 +132,7 @@ def viz_frames_eval_sample(frame_data: dict, num_recons: int, patch_width: int, 
     patches = frame_data['patch_pos'][recons_start: recons_end]
 
     # Paint the frames
-    paint_frames(recons_frames, patches, patch_height, patch_width)
+    paint_frames(recons_frames, patches, res, patch_height, patch_width)
 
     # Convert to tensor, then make grid
     frames_tensor = torch.from_numpy(np.stack(recons_frames)).permute(0, 3, 1, 2)
@@ -229,6 +233,11 @@ def main(game=ROM.Pong_NoFrameskip):
     }
     agent.load_state_dict(clean_ag_checkpoint, strict=True)
 
+    sacc_multi = False
+    if "multi" in wm_path:
+        print("multi-res sacc detected...")
+        sacc_multi = True
+
     print("Putting into eval mode and running...\n")
 
     wm.eval()
@@ -267,15 +276,19 @@ def main(game=ROM.Pong_NoFrameskip):
 
             frame_data.append({
                 "episode": i,
+                "multi_res": sacc_multi,
                 "frames": [item['frame'] for item in data],
                 "patch_pos": [item['patch_pos'] for item in data],
             })
 
     h, w = config.env['patch_size'], config.env['patch_size']
+    res = [1.0]
+    if frame_data[0]['multi_res']:
+        res.append(2.0)
 
     if not config.no_viz:
         print("Sampled Frame Visualization: \n")
-        grid = viz_frames_eval_sample(frame_data[0], config.recons, h, w, rng)
+        grid = viz_frames_eval_sample(frame_data[0], config.recons, res, h, w, rng)
         plt.figure(figsize=(8, 9))
         plt.imshow(grid)
         plt.axis("off")
@@ -283,7 +296,7 @@ def main(game=ROM.Pong_NoFrameskip):
         plt.show()
 
     if config.record:
-        viz_frames_video(frame_data[0], h, w, config.dir, config.record_dir)
+        viz_frames_video(frame_data[0], res, h, w, config.dir, config.record_dir)
 
 if __name__ == "__main__":
     main()
