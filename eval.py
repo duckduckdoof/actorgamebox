@@ -21,6 +21,7 @@ import numpy as np
 import torch
 from ruamel import yaml
 from torchvision.utils import make_grid
+from tqdm import tqdm
 
 from configs.constants import LUMA_VALS
 from configs.globals import ROM
@@ -105,7 +106,7 @@ def viz_frames_video(frame_data: dict, patch_height: int, patch_width: int, src_
 
     with iio.imopen(dest, "w", plugin="pyav") as writer:
         writer.init_video_stream("libx264", fps=30)
-        for frame in frames:
+        for frame in tqdm(frames, desc="Encoding video", unit="frame"):
             writer.write_frame(frame)
 
     print(f"Wrote {len(frames)} frames to {dest}...")
