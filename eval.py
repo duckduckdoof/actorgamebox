@@ -234,7 +234,7 @@ def main(game=ROM.Pong_NoFrameskip):
     agent.load_state_dict(clean_ag_checkpoint, strict=True)
 
     sacc_multi = False
-    if "multi" in wm_path:
+    if "multi" in str(wm_path):
         print("multi-res sacc detected...")
         sacc_multi = True
 
