@@ -92,7 +92,7 @@ def paint_frames(frames: list, patches: list, res: list, height: int, width: int
 
         # Paint multi-resolution, if applicable
         for resolution in res:
-            h, w = height * resolution, width * resolution
+            h, w = int(height * resolution), int(width * resolution)
             paint_square(recon, patch, color, np.array([h, w]), hollow=True)
 
 def viz_frames_video(frame_data: dict, res: list, patch_height: int, patch_width: int, src_dir: str, dest_dir: str):
