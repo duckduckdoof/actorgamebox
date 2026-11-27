@@ -30,6 +30,9 @@ from modules.agent import Agent
 from modules.wm import WorldModel
 
 
+# CONSTANTS
+DEFAULT_PATCH_COLOR = np.array([255, 255, 0])
+
 # MAIN
 def rgb_to_gray_3ch(frames: np.ndarray) -> np.ndarray:
     """Converts an RGB uint8 array to 3-channel grayscale."""
@@ -78,26 +81,38 @@ def paint_square(
         if 0 <= x_right < w:
             frame[y_min:y_max, x_right] = rgb
 
-def viz_frames_eval(frame_data: dict, num_recons: int, patch_width: int, patch_height: int, rng):
+def paint_frames(frames: list, patches: list, height: int, width: int, color: np.ndarray = DEFAULT_PATCH_COLOR):
+    # Paint the focus on each frame
+    for recon, patch in zip(frames, patches):
+        r = np.array([2,2])
+        h, w = height, width
+        paint_square(recon, patch, color, r)
+        paint_square(recon, patch, color, np.array([h, w]), hollow=True)
+
+def viz_frames_video(frame_data: dict, patch_width: int, patch_height: int):
+    """ Given frame data, compile into video with painted focus """
+    pass
+
+def viz_frames_eval_sample(frame_data: dict, num_recons: int, patch_width: int, patch_height: int, rng):
     """ Given frame data from running the eye wrapper, collect recons. """
+
+    # Sample random sequence of frames.
     num_frames = len(frame_data['frames'])
     frames_idx = rng.choice(num_frames - num_recons)
     recons_start, recons_end = frames_idx, frames_idx + num_recons
-
     print(f"Number of recons: {num_recons}")
     print(f"Number of frames: {num_frames}")
     print(f"Selected range: {(recons_start, recons_end)}")
+
+    # Slice frames and convert to grayscale.
     recons_frames = frame_data['frames'][recons_start: recons_end]
     recons_frames = [rgb_to_gray_3ch(r.copy()) for r in recons_frames]
     patches = frame_data['patch_pos'][recons_start: recons_end]
 
-    for recon, patch in zip(recons_frames, patches):
-        yellow = np.array([255, 255, 0])
-        r = np.array([2,2])
-        h, w = patch_height, patch_width
-        paint_square(recon, patch, yellow, r)
-        paint_square(recon, patch, yellow, np.array([h, w]), hollow=True)
+    # Paint the frames
+    paint_frames(recons_frames, patches, patch_height, patch_width)
 
+    # Convert to tensor, then make grid
     frames_tensor = torch.from_numpy(np.stack(recons_frames)).permute(0, 3, 1, 2)
 
     grid_tensor = make_grid(frames_tensor, nrow=4, padding=2)
@@ -236,7 +251,7 @@ def main(game=ROM.Pong_NoFrameskip):
 
     print("Sampled Frame Visualization: \n")
     h, w = config.env['patch_size'], config.env['patch_size']
-    grid = viz_frames_eval(frame_data[0], config.recons, h, w, rng)
+    grid = viz_frames_eval_sample(frame_data[0], config.recons, h, w, rng)
 
     plt.figure(figsize=(8, 9))
     plt.imshow(grid)
