@@ -16,6 +16,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import matplotlib.pyplot as plt
+import imageio.v3 as iio
 import numpy as np
 import torch
 from ruamel import yaml
@@ -89,9 +90,25 @@ def paint_frames(frames: list, patches: list, height: int, width: int, color: np
         paint_square(recon, patch, color, r)
         paint_square(recon, patch, color, np.array([h, w]), hollow=True)
 
-def viz_frames_video(frame_data: dict, patch_width: int, patch_height: int):
+def viz_frames_video(frame_data: dict, patch_height: int, patch_width: int, src_dir: str, dest_dir: str):
     """ Given frame data, compile into video with painted focus """
-    pass
+
+    # Paint the focus points on the frame
+    frames = [rgb_to_gray_3ch(f) for f in frame_data['frames']]
+    patches = frame_data['patch_pos']
+    assert len(frames) == len(patches)
+    paint_frames(frames, patches, patch_height, patch_width)
+
+    # Save the frames as mp4 file.
+    src = src_dir.replace("/", ".")
+    dest = Path(dest_dir + src + "sacc-track.mp4")
+
+    with iio.imopen(dest, "w", plugin="pyav") as writer:
+        writer.init_video_stream("libx264", fps=30)
+        for frame in frames:
+            writer.write_frame(frame)
+
+    print(f"Wrote {len(frames)} frames to {dest}...")
 
 def viz_frames_eval_sample(frame_data: dict, num_recons: int, patch_width: int, patch_height: int, rng):
     """ Given frame data from running the eye wrapper, collect recons. """
@@ -130,6 +147,9 @@ def main(game=ROM.Pong_NoFrameskip):
     parser.add_argument("--dir", type=str, default="models/pong/base/", help="Base dir for models.")
     parser.add_argument("--num", type=int, default=1, help="Default number of episodes.")
     parser.add_argument("--recons", type=int, default=8, help="Default number of episodes.")
+    parser.add_argument("--no_viz", default=True, action='store_false', help="Flag for disabling visualizing sampled frames.")
+    parser.add_argument("--record", default=False, action='store_true', help="Flag for recording eval.")
+    parser.add_argument("--record_dir", type=str, default="recordings/", help="Default dir for recordings.")
     args = parser.parse_args()
 
     # Load from config file
@@ -145,7 +165,10 @@ def main(game=ROM.Pong_NoFrameskip):
         'compile': args.compile,
         'dir': args.dir,
         'num': args.num,
-        'recons': args.recons
+        'recons': args.recons,
+        'no_viz': args.no_viz,
+        'record': args.record,
+        'record_dir': args.record_dir
     }
     config = SimpleNamespace(**config)
     # print(f"Config: {config}")
@@ -247,17 +270,19 @@ def main(game=ROM.Pong_NoFrameskip):
                 "patch_pos": [item['patch_pos'] for item in data],
             })
 
-    print(stats)
-
-    print("Sampled Frame Visualization: \n")
     h, w = config.env['patch_size'], config.env['patch_size']
-    grid = viz_frames_eval_sample(frame_data[0], config.recons, h, w, rng)
 
-    plt.figure(figsize=(8, 9))
-    plt.imshow(grid)
-    plt.axis("off")
-    plt.tight_layout()
-    plt.show()
+    if not config.no_viz:
+        print("Sampled Frame Visualization: \n")
+        grid = viz_frames_eval_sample(frame_data[0], config.recons, h, w, rng)
+        plt.figure(figsize=(8, 9))
+        plt.imshow(grid)
+        plt.axis("off")
+        plt.tight_layout()
+        plt.show()
+
+    if config.record:
+        viz_frames_video(frame_data[0], h, w, config.dir, config.record_dir)
 
 if __name__ == "__main__":
     main()
